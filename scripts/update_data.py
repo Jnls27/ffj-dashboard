@@ -279,6 +279,92 @@ def build_meta_data(period_to_iso):
             to_float(r.get("actions_landing_page_view")),
         ])
 
+    # --- estado actual de campañas (activo/pausado) ---
+    print("  fetch estado de campañas...")
+    camp_status_rows = windsor_get("facebook", ["campaign", "campaign_effective_status"],
+                                    accounts=[META_ACCOUNT],
+                                    date_from=period_from, date_to=period_to_iso)
+    campaignStatus = {}
+    for r in camp_status_rows:
+        c = r.get("campaign")
+        s = r.get("campaign_effective_status")
+        if c and s:
+            campaignStatus[c] = s  # se queda con el último visto (más reciente en la respuesta)
+
+    # --- adsets (date + campaign + adset) ---
+    print("  fetch adsets...")
+    ADSET_FIELDS = META_FIELDS + ["campaign", "adset_name", "adset_effective_status"]
+    adset_rows = windsor_get("facebook", ADSET_FIELDS, accounts=[META_ACCOUNT],
+                              date_from=period_from, date_to=period_to_iso)
+    adsetsRaw = []
+    adsetStatus = {}
+    for r in adset_rows:
+        d = r.get("date")
+        c = r.get("campaign") or "(sin nombre)"
+        a = r.get("adset_name") or "(sin nombre)"
+        if not d:
+            continue
+        s = r.get("adset_effective_status")
+        if s:
+            adsetStatus[a] = s
+        adsetsRaw.append([
+            d, c, a,
+            to_float(r.get("spend")),
+            to_float(r.get("action_values_omni_purchase")),
+            to_float(r.get("actions_omni_purchase")),
+            to_float(r.get("actions_lead")),
+            to_float(r.get("outbound_clicks_outbound_click")),
+            to_float(r.get("impressions")),
+            to_float(r.get("reach")),
+            to_float(r.get("actions_landing_page_view")),
+        ])
+
+    # --- anuncios/creatividades (date + campaign + adset + ad) ---
+    # Hook Rate = reproducciones a 2s / Impresiones; Hold Rate = ThruPlays / reproducciones a 2s
+    # (definición aproximada; Meta no expone un campo literal "3 segundos" en Windsor.ai).
+    print("  fetch anuncios/creatividades...")
+    AD_FIELDS = META_FIELDS + [
+        "campaign", "adset_name", "ad_name", "effective_status",
+        "thumbnail_url", "website_destination_url",
+        "video_continuous_2_sec_watched_actions_video_view",
+        "video_thruplay_watched_actions_video_view",
+    ]
+    ad_rows = windsor_get("facebook", AD_FIELDS, accounts=[META_ACCOUNT],
+                           date_from=period_from, date_to=period_to_iso)
+    adsRaw = []
+    adStatus = {}
+    adMeta = {}
+    for r in ad_rows:
+        d = r.get("date")
+        c = r.get("campaign") or "(sin nombre)"
+        aset = r.get("adset_name") or "(sin nombre)"
+        ad = r.get("ad_name") or "(sin nombre)"
+        if not d:
+            continue
+        if r.get("effective_status"):
+            adStatus[ad] = r.get("effective_status")
+        if ad not in adMeta:
+            adMeta[ad] = {
+                "thumbnail_url": r.get("thumbnail_url") or "",
+                "destination_url": r.get("website_destination_url") or "",
+            }
+        # Guardamos los NUMERADORES en bruto (vistas a 2s, thruplays), no la tasa ya
+        # calculada -- así el front-end puede agregar por cualquier rango de fechas
+        # (SUM/SUM), igual que hace con CTR/CPC/etc., nunca como media de tasas diarias.
+        adsRaw.append([
+            d, c, aset, ad,
+            to_float(r.get("spend")),
+            to_float(r.get("action_values_omni_purchase")),
+            to_float(r.get("actions_omni_purchase")),
+            to_float(r.get("actions_lead")),
+            to_float(r.get("outbound_clicks_outbound_click")),
+            to_float(r.get("impressions")),
+            to_float(r.get("reach")),
+            to_float(r.get("actions_landing_page_view")),
+            to_float(r.get("video_continuous_2_sec_watched_actions_video_view")),
+            to_float(r.get("video_thruplay_watched_actions_video_view")),
+        ])
+
     # --- histórico 2025 (para Comparativa) ---
     print("  fetch dailyRaw2025...")
     to_2025 = date.fromisoformat(period_to_iso).replace(year=2025)
@@ -307,6 +393,12 @@ def build_meta_data(period_to_iso):
         "dailyRaw2025": dailyRaw2025,
         "campaignsRaw": campaignsRaw,
         "campaignsList": sorted(campaigns_seen),
+        "campaignStatus": campaignStatus,
+        "adsetsRaw": adsetsRaw,
+        "adsetStatus": adsetStatus,
+        "adsRaw": adsRaw,
+        "adStatus": adStatus,
+        "adMeta": adMeta,
         "months": months,
         "last7d": last7d,
         "prev7d": prev7d,
