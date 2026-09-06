@@ -173,6 +173,27 @@
     display:inline-block; font-size:10.5px; font-weight:600; padding:2px 7px; border-radius:999px;
     background: var(--page-plane); color: var(--text-secondary); margin-left:6px;
   }
+
+  .status-pill {
+    display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600;
+    padding:3px 8px; border-radius:999px; white-space:nowrap;
+  }
+  .status-pill.active { color:#0ca30c; background: rgba(12,163,12,0.1); }
+  .status-pill.paused { color: var(--text-muted); background: rgba(137,135,129,0.12); }
+  .status-pill .dot { width:6px; height:6px; border-radius:50%; background:currentColor; }
+
+  .creative-cell { display:flex; align-items:center; gap:10px; }
+  .creative-thumb {
+    width:36px; height:36px; border-radius:8px; background: var(--gridline);
+    object-fit: cover; flex-shrink:0; border:1px solid var(--border);
+  }
+  .dest-link { font-size:11px; color: var(--series-1); text-decoration:none; }
+  .dest-link:hover { text-decoration:underline; }
+
+  table.sortable thead th { cursor:pointer; user-select:none; }
+  table.sortable thead th:hover { color: var(--text-primary); }
+  table.sortable thead th .sort-arrow { font-size:9px; margin-left:3px; opacity:0.45; }
+  table.sortable thead th.sorted .sort-arrow { opacity:1; }
   @media (max-width: 900px) {
     .stat-row { grid-template-columns: repeat(3,1fr); }
   }
@@ -505,7 +526,23 @@
       <table id="data-table-camp"></table>
     </div>
     <p class="footer-note">CPC y CTR calculados sobre clics salientes (fuera de Meta). CR Lead y CR Compra = Leads/Compras sobre clics salientes.<br>
-    Tipo de campaña se asigna por el nombre: <strong>Ecommerce</strong> = contiene "ecom"; <strong>Suscripción</strong> = contiene "suscri" y "PE" (purchase event); <strong>Leads</strong> = contiene "suscri" y "LE" (lead event); el resto queda en <strong>Otros</strong>.</p>
+    Tipo de campaña se asigna por el nombre: <strong>Ecommerce</strong> = contiene "ecom"; <strong>Suscripción</strong> = contiene "suscri" y "PE" (purchase event); <strong>Leads</strong> = contiene "suscri" y "LE" (lead event); el resto queda en <strong>Otros</strong>. Haz clic en cualquier columna para ordenar.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Desglose por conjunto de anuncios (adset) <span class="period" id="camp-period-label-adset"></span></h2>
+    <div class="table-scroll">
+      <table id="data-table-camp-adset"></table>
+    </div>
+    <p class="footer-note">Misma tabla y mismos filtros de arriba, agrupada por adset en vez de por campaña.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Desglose por anuncio (creatividad) <span class="period" id="camp-period-label-ad"></span></h2>
+    <div class="table-scroll">
+      <table id="data-table-camp-ad"></table>
+    </div>
+    <p class="footer-note">Hook Rate = reproducciones a 2s / Impresiones. Hold Rate = ThruPlays / reproducciones a 2s.</p>
   </div>
 
 
@@ -1383,19 +1420,73 @@ function classifyCampaign(name) {
 const campaignType = {};
 DATA.campaignsList.forEach(c => { campaignType[c] = classifyCampaign(c); });
 
-function buildCampaignsTable(tableId, rowsObj, labelsArr, firstColLabel) {
+function statusPill(s) {
+  if (!s) return '<span class="status-pill paused"><span class="dot"></span>—</span>';
+  const active = String(s).toUpperCase() === 'ACTIVE';
+  return `<span class="status-pill ${active?'active':'paused'}"><span class="dot"></span>${active?'Activo':'Pausado'}</span>`;
+}
+const campCols = [{key:'status', label:'Estado', fmt: statusPill}, ...cols];
+const adCols = [...campCols,
+  {key:'hook_rate', label:'Hook Rate', fmt: fmtPct},
+  {key:'hold_rate', label:'Hold Rate', fmt: fmtPct},
+  {key:'dest', label:'Destino', fmt: v => v ? `<a class="dest-link" href="${v}" target="_blank" rel="noopener">Ver enlace ↗</a>` : '—'},
+];
+
+const tableCache = {}; // tableId -> {rowsObj, labelsArr, firstColLabel, colsUsed, nameCellFn, sortKey, sortDir}
+
+function renderTableBody(tableId) {
+  const c = tableCache[tableId];
+  if (!c) return;
+  const { rowsObj, labelsArr, firstColLabel, colsUsed, nameCellFn, sortKey, sortDir } = c;
+  let sortedLabels = labelsArr.slice();
+  if (sortKey) {
+    sortedLabels.sort((a,b) => {
+      let av = sortKey === '__name__' ? a : rowsObj[a][sortKey];
+      let bv = sortKey === '__name__' ? b : rowsObj[b][sortKey];
+      if (av === null || av === undefined || !isFinite(av)) av = (typeof bv === 'string') ? '' : -Infinity;
+      if (bv === null || bv === undefined || !isFinite(bv)) bv = (typeof av === 'string') ? '' : -Infinity;
+      if (av < bv) return -1 * sortDir;
+      if (av > bv) return 1 * sortDir;
+      return 0;
+    });
+  }
   const table = document.getElementById(tableId);
-  let thead = `<thead><tr><th>${firstColLabel}</th>` + cols.map(c=>`<th>${c.label}</th>`).join('') + '</tr></thead>';
+  function thHtml(key, label) {
+    const isSorted = sortKey === key;
+    const arrow = isSorted ? (sortDir === 1 ? '▲' : '▼') : '⇅';
+    return `<th data-key="${key}" class="${isSorted?'sorted':''}">${label}<span class="sort-arrow">${arrow}</span></th>`;
+  }
+  let thead = `<thead><tr>${thHtml('__name__', firstColLabel)}${colsUsed.map(cc=>thHtml(cc.key, cc.label)).join('')}</tr></thead>`;
   let tbody = '<tbody>';
-  labelsArr.forEach(lab => {
+  sortedLabels.forEach(lab => {
     const r = rowsObj[lab];
-    const badge = campaignType[lab] ? `<span class="type-badge">${campaignType[lab]}</span>` : '';
-    tbody += `<tr><td class="month-cell">${lab}${badge}</td>` + cols.map(c=>`<td>${c.fmt(r[c.key])}</td>`).join('') + '</tr>';
+    tbody += `<tr><td class="month-cell">${nameCellFn(lab, r)}</td>` + colsUsed.map(cc => `<td>${cc.fmt(r[cc.key])}</td>`).join('') + '</tr>';
   });
   const tr = rowsObj["Total"];
-  tbody += `<tr class="total-row"><td class="month-cell">Total</td>` + cols.map(c=>`<td>${c.fmt(tr[c.key])}</td>`).join('') + '</tr>';
+  tbody += `<tr class="total-row"><td class="month-cell">Total</td>` + colsUsed.map(cc => `<td>${cc.key==='status'||cc.key==='dest'?'':cc.fmt(tr[cc.key])}</td>`).join('') + '</tr>';
   tbody += '</tbody>';
+  table.classList.add('sortable');
   table.innerHTML = thead + tbody;
+  table.querySelectorAll('thead th').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.key;
+      if (c.sortKey === key) { c.sortDir *= -1; } else { c.sortKey = key; c.sortDir = 1; }
+      renderTableBody(tableId);
+    });
+  });
+}
+
+function buildCampaignsTable(tableId, rowsObj, labelsArr, firstColLabel, opts) {
+  opts = opts || {};
+  const colsUsed = opts.cols || cols;
+  const nameCellFn = opts.nameCellFn || ((lab) => `${lab}${campaignType[lab] ? `<span class="type-badge">${campaignType[lab]}</span>` : ''}`);
+  const prev = tableCache[tableId];
+  tableCache[tableId] = {
+    rowsObj, labelsArr: labelsArr.filter(l => l !== 'Total'), firstColLabel, colsUsed, nameCellFn,
+    sortKey: prev ? prev.sortKey : null,
+    sortDir: prev ? prev.sortDir : 1,
+  };
+  renderTableBody(tableId);
 }
 
 
@@ -1502,7 +1593,11 @@ function renderCampaignsTable() {
 
   const campaignNames = Object.keys(byCampaign).sort((a,b) => byCampaign[b].spend - byCampaign[a].spend);
   const rowsObj = {};
-  campaignNames.forEach(c => { rowsObj[c] = deriveDay(byCampaign[c]); });
+  campaignNames.forEach(c => {
+    const r = deriveDay(byCampaign[c]);
+    r.status = DATA.campaignStatus ? DATA.campaignStatus[c] : null;
+    rowsObj[c] = r;
+  });
   const grandTotal = campaignNames.reduce((acc,c) => {
     const b = byCampaign[c];
     acc.spend+=b.spend; acc.revenue+=b.revenue; acc.purchases+=b.purchases; acc.leads+=b.leads;
@@ -1514,9 +1609,89 @@ function renderCampaignsTable() {
   if (campaignNames.length === 0) {
     document.getElementById('data-table-camp').innerHTML = '<tbody><tr><td style="padding:16px;color:var(--text-muted);">Sin datos para este periodo/selección.</td></tr></tbody>';
   } else {
-    buildCampaignsTable('data-table-camp', rowsObj, campaignNames, 'Campaña');
+    buildCampaignsTable('data-table-camp', rowsObj, campaignNames, 'Campaña', { cols: campCols });
   }
   document.getElementById('camp-period-label').textContent = '(' + fmtDate(from) + ' — ' + fmtDate(to) + ')';
+
+  // ---- Adsets (mismos filtros, agrupado por adset) ----
+  const byAdset = {};
+  (DATA.adsetsRaw || []).forEach(r => {
+    const [date, campaign, adset, spend, revenue, purchases, leads, outbound, impressions, reach, visits] = r;
+    if (date < from || date > to) return;
+    if (campSelected.size > 0 && !campSelected.has(campaign)) return;
+    if (typeFilter !== 'all' && campaignType[campaign] !== typeFilter) return;
+    if (!byAdset[adset]) byAdset[adset] = {spend:0, revenue:0, purchases:0, leads:0, outbound:0, impressions:0, reach:0, visits:0};
+    const b = byAdset[adset];
+    b.spend+=spend; b.revenue+=revenue; b.purchases+=purchases; b.leads+=leads;
+    b.outbound+=outbound; b.impressions+=impressions; b.reach+=reach; b.visits+=visits;
+  });
+  const adsetNames = Object.keys(byAdset).sort((a,b) => byAdset[b].spend - byAdset[a].spend);
+  const rowsObjAdset = {};
+  adsetNames.forEach(a => {
+    const r = deriveDay(byAdset[a]);
+    r.status = DATA.adsetStatus ? DATA.adsetStatus[a] : null;
+    rowsObjAdset[a] = r;
+  });
+  const grandTotalAdset = adsetNames.reduce((acc,a) => {
+    const b = byAdset[a];
+    acc.spend+=b.spend; acc.revenue+=b.revenue; acc.purchases+=b.purchases; acc.leads+=b.leads;
+    acc.outbound+=b.outbound; acc.impressions+=b.impressions; acc.reach+=b.reach; acc.visits+=b.visits;
+    return acc;
+  }, {spend:0, revenue:0, purchases:0, leads:0, outbound:0, impressions:0, reach:0, visits:0});
+  rowsObjAdset["Total"] = deriveDay(grandTotalAdset);
+
+  if (adsetNames.length === 0) {
+    document.getElementById('data-table-camp-adset').innerHTML = '<tbody><tr><td style="padding:16px;color:var(--text-muted);">Sin datos para este periodo/selección.</td></tr></tbody>';
+  } else {
+    buildCampaignsTable('data-table-camp-adset', rowsObjAdset, adsetNames, 'Adset', { cols: campCols, nameCellFn: (lab) => lab });
+  }
+  document.getElementById('camp-period-label-adset').textContent = '(' + fmtDate(from) + ' — ' + fmtDate(to) + ')';
+
+  // ---- Anuncios/creatividades (mismos filtros, agrupado por anuncio) ----
+  const byAd = {};
+  (DATA.adsRaw || []).forEach(r => {
+    const [date, campaign, adset, ad, spend, revenue, purchases, leads, outbound, impressions, reach, visits, hookNum, holdNum] = r;
+    if (date < from || date > to) return;
+    if (campSelected.size > 0 && !campSelected.has(campaign)) return;
+    if (typeFilter !== 'all' && campaignType[campaign] !== typeFilter) return;
+    if (!byAd[ad]) byAd[ad] = {spend:0, revenue:0, purchases:0, leads:0, outbound:0, impressions:0, reach:0, visits:0, hookNum:0, holdNum:0};
+    const b = byAd[ad];
+    b.spend+=spend; b.revenue+=revenue; b.purchases+=purchases; b.leads+=leads;
+    b.outbound+=outbound; b.impressions+=impressions; b.reach+=reach; b.visits+=visits;
+    b.hookNum+=hookNum; b.holdNum+=holdNum;
+  });
+  const adNames = Object.keys(byAd).sort((a,b) => byAd[b].spend - byAd[a].spend);
+  const rowsObjAd = {};
+  adNames.forEach(ad => {
+    const b = byAd[ad];
+    const r = deriveDay(b);
+    r.status = DATA.adStatus ? DATA.adStatus[ad] : null;
+    r.hook_rate = b.impressions ? b.hookNum / b.impressions * 100 : 0;
+    r.hold_rate = b.hookNum ? b.holdNum / b.hookNum * 100 : 0;
+    r.dest = DATA.adMeta && DATA.adMeta[ad] ? DATA.adMeta[ad].destination_url : '';
+    r.thumb = DATA.adMeta && DATA.adMeta[ad] ? DATA.adMeta[ad].thumbnail_url : '';
+    rowsObjAd[ad] = r;
+  });
+  const grandTotalAd = Object.values(byAd).reduce((acc,b) => {
+    acc.spend+=b.spend; acc.revenue+=b.revenue; acc.purchases+=b.purchases; acc.leads+=b.leads;
+    acc.outbound+=b.outbound; acc.impressions+=b.impressions; acc.reach+=b.reach; acc.visits+=b.visits;
+    acc.hookNum+=b.hookNum; acc.holdNum+=b.holdNum;
+    return acc;
+  }, {spend:0, revenue:0, purchases:0, leads:0, outbound:0, impressions:0, reach:0, visits:0, hookNum:0, holdNum:0});
+  const totalAdRow = deriveDay(grandTotalAd);
+  totalAdRow.hook_rate = grandTotalAd.impressions ? grandTotalAd.hookNum / grandTotalAd.impressions * 100 : 0;
+  totalAdRow.hold_rate = grandTotalAd.hookNum ? grandTotalAd.holdNum / grandTotalAd.hookNum * 100 : 0;
+  rowsObjAd["Total"] = totalAdRow;
+
+  if (adNames.length === 0) {
+    document.getElementById('data-table-camp-ad').innerHTML = '<tbody><tr><td style="padding:16px;color:var(--text-muted);">Sin datos para este periodo/selección.</td></tr></tbody>';
+  } else {
+    buildCampaignsTable('data-table-camp-ad', rowsObjAd, adNames, 'Anuncio', {
+      cols: adCols,
+      nameCellFn: (lab, r) => `<div class="creative-cell">${r && r.thumb ? `<img class="creative-thumb" src="${r.thumb}" alt="">` : '<div class="creative-thumb"></div>'}<span>${lab}</span></div>`,
+    });
+  }
+  document.getElementById('camp-period-label-ad').textContent = '(' + fmtDate(from) + ' — ' + fmtDate(to) + ')';
 }
 
 buildCampMultiselect();
