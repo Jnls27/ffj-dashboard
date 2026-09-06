@@ -1,0 +1,68 @@
+name: Actualización diaria del dashboard
+
+on:
+  schedule:
+    # 05:00 UTC ≈ 06:00 hora España en invierno (CET, UTC+1) y 07:00 en
+    # verano (CEST, UTC+1... nota: con horario de verano se adelanta 1h,
+    # así que en verano correría a las 07:00 en vez de 06:00). Si se quiere
+    # precisión exacta todo el año, dividir en dos crons estacionales.
+    - cron: '0 5 * * *'
+  workflow_dispatch: {}  # permite lanzarlo a mano desde GitHub si hace falta
+  push:
+    branches: [ main ]  # así, cualquier cambio manual (p.ej. corregir index.html) también se publica solo
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: pip install requests
+
+      - name: Ejecutar actualización de datos
+        env:
+          WINDSOR_API_KEY: ${{ secrets.WINDSOR_API_KEY }}
+        run: python scripts/update_data.py
+
+      - name: Commit y push de los JSON actualizados
+        run: |
+          git config user.name "ffj-dashboard-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data_meta.json data_tt.json
+          git diff --quiet --cached || git commit -m "Actualización automática de datos $(date -u +%Y-%m-%d)"
+          git push
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact para Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+  deploy:
+    needs: update-data
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy a GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
