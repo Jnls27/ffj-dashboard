@@ -63,6 +63,9 @@
   .meta-pill .dot { width:7px; height:7px; border-radius:50%; background:#0ca30c; }
 
   .stat-period-label { font-size:12.5px; color: var(--text-secondary); margin: 0 0 10px; }
+  .type-stat-block { margin-top:22px; }
+  .type-stat-title { font-size:13.5px; font-weight:600; color: var(--text-secondary); margin:0 0 10px; }
+  .type-stat-title .period { font-weight:400; color: var(--text-muted); }
   .stat-row {
     display:grid; grid-template-columns: repeat(6, 1fr); gap:14px; margin-bottom: 28px;
   }
@@ -228,6 +231,26 @@
   <p class="stat-period-label" id="stat-period-label"></p>
   <div class="stat-row" id="stat-row"></div>
 
+  <div class="type-stat-block" id="type-stat-block-Suscripción" style="display:none;">
+    <h3 class="type-stat-title">Solo campañas de Suscripción (suscri + PE) <span class="period" id="type-stat-period-Suscripción"></span></h3>
+    <div class="stat-row" id="stat-row-Suscripción"></div>
+  </div>
+
+  <div class="type-stat-block" id="type-stat-block-Leads" style="display:none;">
+    <h3 class="type-stat-title">Solo campañas de Leads (suscri + LE) <span class="period" id="type-stat-period-Leads"></span></h3>
+    <div class="stat-row" id="stat-row-Leads"></div>
+  </div>
+
+  <div class="type-stat-block" id="type-stat-block-Ecommerce" style="display:none;">
+    <h3 class="type-stat-title">Solo campañas de Ecommerce <span class="period" id="type-stat-period-Ecommerce"></span></h3>
+    <div class="stat-row" id="stat-row-Ecommerce"></div>
+  </div>
+
+  <div class="type-stat-block" id="type-stat-block-Otros" style="display:none;">
+    <h3 class="type-stat-title">Solo campañas "Otros" (sin clasificar) <span class="period" id="type-stat-period-Otros"></span></h3>
+    <div class="stat-row" id="stat-row-Otros"></div>
+  </div>
+
   <div class="tab-bar">
     <button class="tab-btn active" data-tab="mensual" onclick="switchTab('mensual')">Mensual</button>
     <button class="tab-btn" data-tab="semanal" onclick="switchTab('semanal')">Semanal</button>
@@ -238,6 +261,21 @@
   </div>
 
   <div id="tab-mensual" class="tab-panel">
+
+  <div class="panel">
+    <div class="filter-bar">
+      <div class="filter-field">
+        <label for="mensual-type-filter">Tipo de campaña</label>
+        <select id="mensual-type-filter" onchange="onGlobalTypeFilterChange(this.value)">
+          <option value="all" selected>Todos</option>
+          <option value="Ecommerce">Ecommerce</option>
+          <option value="Suscripción">Suscripción</option>
+          <option value="Leads">Leads</option>
+          <option value="Otros">Otros</option>
+        </select>
+      </div>
+    </div>
+  </div>
 
   <div class="panel">
     <h2>Desglose mensual <span class="period" id="period-label"></span></h2>
@@ -320,6 +358,21 @@
   <div id="tab-semanal" class="tab-panel" style="display:none;">
 
   <div class="panel">
+    <div class="filter-bar">
+      <div class="filter-field">
+        <label for="semanal-type-filter">Tipo de campaña</label>
+        <select id="semanal-type-filter" onchange="onGlobalTypeFilterChange(this.value)">
+          <option value="all" selected>Todos</option>
+          <option value="Ecommerce">Ecommerce</option>
+          <option value="Suscripción">Suscripción</option>
+          <option value="Leads">Leads</option>
+          <option value="Otros">Otros</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
     <h2>Desglose semanal <span class="period" id="period-label-w"></span></h2>
     <div class="table-scroll">
       <table id="data-table-w"></table>
@@ -398,6 +451,21 @@
   </div><!-- /tab-semanal -->
 
   <div id="tab-diario" class="tab-panel" style="display:none;">
+
+  <div class="panel">
+    <div class="filter-bar">
+      <div class="filter-field">
+        <label for="diario-type-filter">Tipo de campaña</label>
+        <select id="diario-type-filter" onchange="onGlobalTypeFilterChange(this.value)">
+          <option value="all" selected>Todos</option>
+          <option value="Ecommerce">Ecommerce</option>
+          <option value="Suscripción">Suscripción</option>
+          <option value="Leads">Leads</option>
+          <option value="Otros">Otros</option>
+        </select>
+      </div>
+    </div>
+  </div>
 
   <div class="panel">
     <h2>Desglose diario <span class="period" id="period-label-d"></span></h2>
@@ -1018,6 +1086,22 @@ const fmtEUR2 = (v) => new Intl.NumberFormat('es-ES', {style:'currency', currenc
 const fmtNum = (v) => new Intl.NumberFormat('es-ES').format(Math.round(v));
 const fmtNum2 = (v) => new Intl.NumberFormat('es-ES', {minimumFractionDigits:2, maximumFractionDigits:2}).format(v);
 const fmtPct = (v) => new Intl.NumberFormat('es-ES', {minimumFractionDigits:2, maximumFractionDigits:2}).format(v) + ' %';
+
+/* ============ CAMPAIGN TYPE CLASSIFICATION ============ */
+/* Movido aquí arriba (antes vivía junto a la pestaña Campañas) porque el filtro
+   compartido de Mensual/Semanal/Diario necesita campaignType ya listo antes. */
+function classifyCampaign(name) {
+  const n = name.toLowerCase();
+  if (n.includes('ecom')) return 'Ecommerce';
+  const hasSuscri = n.includes('suscri');
+  const hasPE = /(^|[_\-\s(])pe([_\-\s)]|$)/.test(n);
+  const hasLE = /(^|[_\-\s(])le([_\-\s)]|$)/.test(n);
+  if (hasSuscri && hasPE) return 'Suscripción';
+  if (hasSuscri && hasLE) return 'Leads';
+  return 'Otros';
+}
+const campaignType = {};
+DATA.campaignsList.forEach(c => { campaignType[c] = classifyCampaign(c); });
 const fmtDate = (iso) => {
   const d = new Date(iso);
   return d.toLocaleDateString('es-ES', {day:'2-digit', month:'long', year:'numeric'});
@@ -1057,6 +1141,38 @@ document.getElementById('stat-row').innerHTML = stats.map(s =>
 ).join('');
 document.getElementById('stat-period-label').textContent =
   fmtDate(last7.from) + ' – ' + fmtDate(last7.to) + ' vs. periodo anterior (' + fmtDate(prev7.from) + ' – ' + fmtDate(prev7.to) + ')';
+
+/* ============ STAT TILES POR TIPO DE CAMPAÑA (mismo cuadro, filtrado) ============ */
+function aggByTypeAndRange(type, from, to) {
+  const acc = emptyAggJs();
+  DATA.campaignsRaw.forEach(r => {
+    if (r[0] < from || r[0] > to) return;
+    if (campaignType[r[1]] !== type) return;
+    addAggJs(acc, r);
+  });
+  return acc;
+}
+function renderTypeStatRow(type) {
+  const last7Type = deriveDay(aggByTypeAndRange(type, last7.from, last7.to));
+  const prev7Type = deriveDay(aggByTypeAndRange(type, prev7.from, prev7.to));
+  const block = document.getElementById('type-stat-block-' + type);
+  // Si no hay ninguna campaña de este tipo con actividad en ninguna de las 2 ventanas, se oculta el bloque entero.
+  if (!last7Type.spend && !prev7Type.spend) { block.style.display = 'none'; return; }
+  block.style.display = '';
+  const statsType = statDefs.map(s => ({
+    label: s.label,
+    value: s.fmt(last7Type[s.key]),
+    delta: deltaBadge(last7Type[s.key], prev7Type[s.key], s.direction),
+  }));
+  document.getElementById('stat-row-' + type).innerHTML = statsType.map(s =>
+    `<div class="stat-tile"><div class="label">${s.label}</div><div class="value">${s.value}</div>${s.delta}</div>`
+  ).join('');
+  document.getElementById('type-stat-period-' + type).textContent =
+    '(' + fmtDate(last7.from) + ' – ' + fmtDate(last7.to) + ' vs. ' + fmtDate(prev7.from) + ' – ' + fmtDate(prev7.to) + ')';
+}
+['Suscripción', 'Leads', 'Ecommerce', 'Otros'].forEach(t => {
+  try { renderTypeStatRow(t); } catch(e) { console.error('Fallo en: stat tiles tipo ' + t, e); }
+});
 
 /* ============ TABLE ============ */
 const cols = [
@@ -1125,10 +1241,112 @@ const daily30Totals = last30Raw.reduce((acc,d) => {
 }, {spend:0, revenue:0, purchases:0, leads:0, outbound:0, impressions:0, reach:0, visits:0});
 dailyRows["Total"] = deriveDay(daily30Totals);
 
-try { buildTable('data-table-d', dailyRows, days_, 'Día'); } catch(e) { console.error('Fallo en: Meta diario', e); }
-document.getElementById('period-label-d').textContent = last30Raw.length
-  ? '(' + fmtDate(last30Raw[0].date) + ' — ' + fmtDate(last30Raw[last30Raw.length-1].date) + ')'
-  : '(sin datos diarios)';
+/* ============ FILTRO "TIPO DE CAMPAÑA" compartido entre Mensual/Semanal/Diario ============ */
+let globalCampTypeFilter = 'all';
+const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function monthLabelFor(dateStr) { return MONTH_ABBR[parseInt(dateStr.slice(5,7), 10) - 1]; }
+function mondayOf(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const day = (d.getDay() + 6) % 7; // 0 = lunes
+  d.setDate(d.getDate() - day);
+  return d;
+}
+const __firstMondayGlobal = mondayOf(DATA.period_from);
+function weekLabelFor(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const diffDays = Math.round((d - __firstMondayGlobal) / 86400000);
+  return 'S' + (Math.floor(diffDays / 7) + 1);
+}
+function emptyAggJs() { return {spend:0, revenue:0, purchases:0, leads:0, outbound:0, impressions:0, reach:0, visits:0}; }
+function addAggJs(acc, r) {
+  acc.spend+=r[2]; acc.revenue+=r[3]; acc.purchases+=r[4]; acc.leads+=r[5];
+  acc.outbound+=r[6]; acc.impressions+=r[7]; acc.reach+=r[8]; acc.visits+=r[9];
+}
+function sumAggJs(a, b) {
+  a.spend+=b.spend; a.revenue+=b.revenue; a.purchases+=b.purchases; a.leads+=b.leads;
+  a.outbound+=b.outbound; a.impressions+=b.impressions; a.reach+=b.reach; a.visits+=b.visits;
+}
+
+function renderMensualTable() {
+  if (globalCampTypeFilter === 'all') {
+    buildTable('data-table', DATA.rows, DATA.months, 'Mes');
+    return;
+  }
+  const byMonth = {};
+  DATA.campaignsRaw.forEach(r => {
+    if (campaignType[r[1]] !== globalCampTypeFilter) return;
+    const m = monthLabelFor(r[0]);
+    if (!byMonth[m]) byMonth[m] = emptyAggJs();
+    addAggJs(byMonth[m], r);
+  });
+  const rowsObj = {};
+  const total = emptyAggJs();
+  DATA.months.forEach(m => { const b = byMonth[m] || emptyAggJs(); rowsObj[m] = deriveDay(b); sumAggJs(total, b); });
+  rowsObj['Total'] = deriveDay(total);
+  buildTable('data-table', rowsObj, DATA.months, 'Mes');
+}
+
+function renderSemanalTable() {
+  if (globalCampTypeFilter === 'all') {
+    buildTable('data-table-w', DATA.weekly.rows, DATA.weekly.labels, 'Semana');
+    return;
+  }
+  const byWeek = {};
+  DATA.campaignsRaw.forEach(r => {
+    if (campaignType[r[1]] !== globalCampTypeFilter) return;
+    const w = weekLabelFor(r[0]);
+    if (!byWeek[w]) byWeek[w] = emptyAggJs();
+    addAggJs(byWeek[w], r);
+  });
+  const rowsObj = {};
+  const total = emptyAggJs();
+  DATA.weekly.labels.forEach(w => { const b = byWeek[w] || emptyAggJs(); rowsObj[w] = deriveDay(b); sumAggJs(total, b); });
+  rowsObj['Total'] = deriveDay(total);
+  buildTable('data-table-w', rowsObj, DATA.weekly.labels, 'Semana');
+}
+
+function renderDiarioTable() {
+  if (globalCampTypeFilter === 'all') {
+    buildTable('data-table-d', dailyRows, days_, 'Día');
+    document.getElementById('period-label-d').textContent = last30Raw.length
+      ? '(' + fmtDate(last30Raw[0].date) + ' — ' + fmtDate(last30Raw[last30Raw.length-1].date) + ')'
+      : '(sin datos diarios)';
+    return;
+  }
+  const datesLast30 = last30Raw.map(d => d.date);
+  const byDate = {};
+  datesLast30.forEach(d => { byDate[d] = emptyAggJs(); });
+  DATA.campaignsRaw.forEach(r => {
+    if (!(r[0] in byDate)) return;
+    if (campaignType[r[1]] !== globalCampTypeFilter) return;
+    addAggJs(byDate[r[0]], r);
+  });
+  const labels = datesLast30.map(dayLabel);
+  const rowsObj = {};
+  const total = emptyAggJs();
+  datesLast30.forEach((d,i) => { rowsObj[labels[i]] = deriveDay(byDate[d]); sumAggJs(total, byDate[d]); });
+  rowsObj['Total'] = deriveDay(total);
+  buildTable('data-table-d', rowsObj, labels, 'Día');
+  document.getElementById('period-label-d').textContent = datesLast30.length
+    ? '(' + fmtDate(datesLast30[0]) + ' — ' + fmtDate(datesLast30[datesLast30.length-1]) + ')'
+    : '(sin datos diarios)';
+}
+
+function onGlobalTypeFilterChange(val) {
+  globalCampTypeFilter = val;
+  ['mensual-type-filter','semanal-type-filter','diario-type-filter'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = val;
+  });
+  try { renderMensualTable(); } catch(e) { console.error('Fallo en: Meta mensual (filtro tipo)', e); }
+  try { renderSemanalTable(); } catch(e) { console.error('Fallo en: Meta semanal (filtro tipo)', e); }
+  try { renderDiarioTable(); } catch(e) { console.error('Fallo en: Meta diario (filtro tipo)', e); }
+}
+window.onGlobalTypeFilterChange = onGlobalTypeFilterChange;
+
+try { renderMensualTable(); } catch(e) { console.error('Fallo en: Meta mensual', e); }
+try { renderSemanalTable(); } catch(e) { console.error('Fallo en: Meta semanal', e); }
+try { renderDiarioTable(); } catch(e) { console.error('Fallo en: Meta diario', e); }
 
 /* ============ TABS ============ */
 const TABS = ['mensual', 'semanal', 'diario', 'campanas', 'comparativa', 'insights'];
@@ -1188,10 +1406,10 @@ function drawBarChart(svgId, values, labels, fmt, width) {
     const gy = padT + innerH - (gv/maxV)*innerH;
     svgContent += `<line class="gridline" x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}"/>`;
   }
-  // when categories are dense (weekly/daily with many points), skip inline value
-  // labels and thin out axis labels to avoid overlap — the hover tooltip still
-  // carries every exact value.
-  const denseChart = bandW < 46;
+  // Solo se ocultan los valores encima de cada barra si de verdad no cabe (categorías
+  // muy numerosas); el umbral se ajustó porque antes se activaba también en Semanal/Diario
+  // sin necesidad. Los ejes (fechas/semanas) sí se siguen espaciando para no amontonarse.
+  const denseChart = bandW < 20; // umbral real de solape, no el falso positivo de antes
   const axisStep = bandW < 18 ? 7 : bandW < 30 ? 3 : 1;
   values.forEach((v, i) => {
     const x = padL + i*bandW + (bandW-barW)/2;
@@ -1243,7 +1461,7 @@ function drawLineChart(svgId, values, labels, fmt, width) {
     const gy = padT + innerH - (gv/maxV)*innerH;
     svgContent += `<line class="gridline" x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}"/>`;
   }
-  const denseChart = stepX < 46;
+  const denseChart = stepX < 20; // umbral real de solape, no el falso positivo de antes
   const axisStep = stepX < 18 ? 7 : stepX < 30 ? 3 : 1;
   const pathD = points.map((p,i) => (i===0?'M':'L') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
   svgContent += `<path class="line-path" d="${pathD}"/>`;
@@ -1303,7 +1521,7 @@ function drawMultiLineChart(svgId, legendId, series, labels, fmt, width) {
     svgContent += `<line class="gridline" x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}"/>`;
   }
 
-  const denseChart = stepX < 46;
+  const denseChart = stepX < 20; // umbral real de solape, no el falso positivo de antes
   const axisStep = stepX < 18 ? 7 : stepX < 30 ? 3 : 1;
 
   series.forEach((s, si) => {
@@ -1413,20 +1631,6 @@ drawMultiLineChart('chart-ctrcr-purchases-d', 'legend-ctrcr-purchases-d', [
 const LAST_DATE_ISO = DATA.campaignsRaw.length
   ? DATA.campaignsRaw.reduce((max,r) => r[0] > max ? r[0] : max, DATA.campaignsRaw[0][0])
   : DATA.period_to;
-
-/* ============ CAMPAIGN TYPE CLASSIFICATION ============ */
-function classifyCampaign(name) {
-  const n = name.toLowerCase();
-  if (n.includes('ecom')) return 'Ecommerce';
-  const hasSuscri = n.includes('suscri');
-  const hasPE = /(^|[_\-\s(])pe([_\-\s)]|$)/.test(n);
-  const hasLE = /(^|[_\-\s(])le([_\-\s)]|$)/.test(n);
-  if (hasSuscri && hasPE) return 'Suscripción';
-  if (hasSuscri && hasLE) return 'Leads';
-  return 'Otros';
-}
-const campaignType = {};
-DATA.campaignsList.forEach(c => { campaignType[c] = classifyCampaign(c); });
 
 function statusPill(s) {
   if (!s) return '<span class="status-pill paused"><span class="dot"></span>—</span>';
