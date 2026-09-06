@@ -63,9 +63,6 @@
   .meta-pill .dot { width:7px; height:7px; border-radius:50%; background:#0ca30c; }
 
   .stat-period-label { font-size:12.5px; color: var(--text-secondary); margin: 0 0 10px; }
-  .type-stat-block { margin-top:22px; }
-  .type-stat-title { font-size:13.5px; font-weight:600; color: var(--text-secondary); margin:0 0 10px; }
-  .type-stat-title .period { font-weight:400; color: var(--text-muted); }
   .stat-row {
     display:grid; grid-template-columns: repeat(6, 1fr); gap:14px; margin-bottom: 28px;
   }
@@ -230,26 +227,6 @@
   <div id="platform-meta">
   <p class="stat-period-label" id="stat-period-label"></p>
   <div class="stat-row" id="stat-row"></div>
-
-  <div class="type-stat-block" id="type-stat-block-Suscripción" style="display:none;">
-    <h3 class="type-stat-title">Solo campañas de Suscripción (suscri + PE) <span class="period" id="type-stat-period-Suscripción"></span></h3>
-    <div class="stat-row" id="stat-row-Suscripción"></div>
-  </div>
-
-  <div class="type-stat-block" id="type-stat-block-Leads" style="display:none;">
-    <h3 class="type-stat-title">Solo campañas de Leads (suscri + LE) <span class="period" id="type-stat-period-Leads"></span></h3>
-    <div class="stat-row" id="stat-row-Leads"></div>
-  </div>
-
-  <div class="type-stat-block" id="type-stat-block-Ecommerce" style="display:none;">
-    <h3 class="type-stat-title">Solo campañas de Ecommerce <span class="period" id="type-stat-period-Ecommerce"></span></h3>
-    <div class="stat-row" id="stat-row-Ecommerce"></div>
-  </div>
-
-  <div class="type-stat-block" id="type-stat-block-Otros" style="display:none;">
-    <h3 class="type-stat-title">Solo campañas "Otros" (sin clasificar) <span class="period" id="type-stat-period-Otros"></span></h3>
-    <div class="stat-row" id="stat-row-Otros"></div>
-  </div>
 
   <div class="tab-bar">
     <button class="tab-btn active" data-tab="mensual" onclick="switchTab('mensual')">Mensual</button>
@@ -1102,6 +1079,7 @@ function classifyCampaign(name) {
 }
 const campaignType = {};
 DATA.campaignsList.forEach(c => { campaignType[c] = classifyCampaign(c); });
+let globalCampTypeFilter = 'all'; // compartido con Mensual/Semanal/Diario y ahora también con este resumen
 const fmtDate = (iso) => {
   const d = new Date(iso);
   return d.toLocaleDateString('es-ES', {day:'2-digit', month:'long', year:'numeric'});
@@ -1131,18 +1109,6 @@ function deltaBadge(curr, prev, direction) {
   else if (direction === 'down_good') colorVar = pct <= 0 ? 'var(--delta-good)' : 'var(--delta-bad)';
   return `<span class="stat-delta" style="color:${colorVar}">${pctStr}</span>`;
 }
-const stats = statDefs.map(s => ({
-  label: s.label,
-  value: s.fmt(last7[s.key]),
-  delta: deltaBadge(last7[s.key], prev7[s.key], s.direction),
-}));
-document.getElementById('stat-row').innerHTML = stats.map(s =>
-  `<div class="stat-tile"><div class="label">${s.label}</div><div class="value">${s.value}</div>${s.delta}</div>`
-).join('');
-document.getElementById('stat-period-label').textContent =
-  fmtDate(last7.from) + ' – ' + fmtDate(last7.to) + ' vs. periodo anterior (' + fmtDate(prev7.from) + ' – ' + fmtDate(prev7.to) + ')';
-
-/* ============ STAT TILES POR TIPO DE CAMPAÑA (mismo cuadro, filtrado) ============ */
 function aggByTypeAndRange(type, from, to) {
   const acc = emptyAggJs();
   DATA.campaignsRaw.forEach(r => {
@@ -1152,27 +1118,23 @@ function aggByTypeAndRange(type, from, to) {
   });
   return acc;
 }
-function renderTypeStatRow(type) {
-  const last7Type = deriveDay(aggByTypeAndRange(type, last7.from, last7.to));
-  const prev7Type = deriveDay(aggByTypeAndRange(type, prev7.from, prev7.to));
-  const block = document.getElementById('type-stat-block-' + type);
-  // Si no hay ninguna campaña de este tipo con actividad en ninguna de las 2 ventanas, se oculta el bloque entero.
-  if (!last7Type.spend && !prev7Type.spend) { block.style.display = 'none'; return; }
-  block.style.display = '';
-  const statsType = statDefs.map(s => ({
+function renderMainStatRow() {
+  const filter = globalCampTypeFilter;
+  const last7Data = filter === 'all' ? last7 : deriveDay(aggByTypeAndRange(filter, last7.from, last7.to));
+  const prev7Data = filter === 'all' ? prev7 : deriveDay(aggByTypeAndRange(filter, prev7.from, prev7.to));
+  const stats = statDefs.map(s => ({
     label: s.label,
-    value: s.fmt(last7Type[s.key]),
-    delta: deltaBadge(last7Type[s.key], prev7Type[s.key], s.direction),
+    value: s.fmt(last7Data[s.key]),
+    delta: deltaBadge(last7Data[s.key], prev7Data[s.key], s.direction),
   }));
-  document.getElementById('stat-row-' + type).innerHTML = statsType.map(s =>
+  document.getElementById('stat-row').innerHTML = stats.map(s =>
     `<div class="stat-tile"><div class="label">${s.label}</div><div class="value">${s.value}</div>${s.delta}</div>`
   ).join('');
-  document.getElementById('type-stat-period-' + type).textContent =
-    '(' + fmtDate(last7.from) + ' – ' + fmtDate(last7.to) + ' vs. ' + fmtDate(prev7.from) + ' – ' + fmtDate(prev7.to) + ')';
+  const typeLabel = filter === 'all' ? '' : ' · Solo campañas de ' + filter;
+  document.getElementById('stat-period-label').textContent =
+    fmtDate(last7.from) + ' – ' + fmtDate(last7.to) + ' vs. periodo anterior (' + fmtDate(prev7.from) + ' – ' + fmtDate(prev7.to) + ')' + typeLabel;
 }
-['Suscripción', 'Leads', 'Ecommerce', 'Otros'].forEach(t => {
-  try { renderTypeStatRow(t); } catch(e) { console.error('Fallo en: stat tiles tipo ' + t, e); }
-});
+try { renderMainStatRow(); } catch(e) { console.error('Fallo en: stat tiles generales', e); }
 
 /* ============ TABLE ============ */
 const cols = [
@@ -1241,8 +1203,7 @@ const daily30Totals = last30Raw.reduce((acc,d) => {
 }, {spend:0, revenue:0, purchases:0, leads:0, outbound:0, impressions:0, reach:0, visits:0});
 dailyRows["Total"] = deriveDay(daily30Totals);
 
-/* ============ FILTRO "TIPO DE CAMPAÑA" compartido entre Mensual/Semanal/Diario ============ */
-let globalCampTypeFilter = 'all';
+/* ============ FILTRO "TIPO DE CAMPAÑA" compartido entre resumen/Mensual/Semanal/Diario ============ */
 const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function monthLabelFor(dateStr) { return MONTH_ABBR[parseInt(dateStr.slice(5,7), 10) - 1]; }
 function mondayOf(dateStr) {
@@ -1341,6 +1302,7 @@ function onGlobalTypeFilterChange(val) {
   try { renderMensualTable(); } catch(e) { console.error('Fallo en: Meta mensual (filtro tipo)', e); }
   try { renderSemanalTable(); } catch(e) { console.error('Fallo en: Meta semanal (filtro tipo)', e); }
   try { renderDiarioTable(); } catch(e) { console.error('Fallo en: Meta diario (filtro tipo)', e); }
+  try { renderMainStatRow(); } catch(e) { console.error('Fallo en: stat tiles generales (filtro tipo)', e); }
 }
 window.onGlobalTypeFilterChange = onGlobalTypeFilterChange;
 
