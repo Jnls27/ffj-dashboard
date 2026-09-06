@@ -2049,6 +2049,25 @@ function switchPlatform(p) {
 }
 window.switchPlatform = switchPlatform;
 
+/* Exponer a window todas las funciones que los atributos onclick/onchange
+   del HTML necesitan llamar desde el ámbito global (bug pre-existente:
+   estas se quedaban encerradas dentro de este IIFE y el navegador las
+   veía como "is not defined" al interactuar con filtros de Campañas y
+   Comparativa 2025, tanto en Meta como en TikTok). */
+window.onCampCheckboxChange = onCampCheckboxChange;
+window.onCampCheckboxChangeTt = onCampCheckboxChangeTt;
+window.onCampDatePresetChange = onCampDatePresetChange;
+window.onCampDatePresetChangeTt = onCampDatePresetChangeTt;
+window.onCampTypeChange = onCampTypeChange;
+window.onCampTypeChangeTt = onCampTypeChangeTt;
+window.onCmpDatePresetChange = onCmpDatePresetChange;
+window.onCmpDatePresetChangeTt = onCmpDatePresetChangeTt;
+window.renderCampaignsTable = renderCampaignsTable;
+window.renderCampaignsTableTt = renderCampaignsTableTt;
+window.renderComparativaTable = renderComparativaTable;
+window.renderComparativaTableTt = renderComparativaTableTt;
+window.toggleCampMultiselect = toggleCampMultiselect;
+window.toggleCampMultiselectTt = toggleCampMultiselectTt;
 
 })();
 </script>
