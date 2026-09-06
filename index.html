@@ -517,6 +517,14 @@
           <div class="multiselect-panel" id="camp-multiselect-panel" style="display:none;"></div>
         </div>
       </div>
+      <div class="filter-field">
+        <label for="camp-status-filter">Estado</label>
+        <select id="camp-status-filter" onchange="renderCampaignsTable()">
+          <option value="all" selected>Todos</option>
+          <option value="ACTIVE">Activo</option>
+          <option value="PAUSED">Pausado</option>
+        </select>
+      </div>
     </div>
   </div>
 
@@ -542,7 +550,7 @@
     <div class="table-scroll">
       <table id="data-table-camp-ad"></table>
     </div>
-    <p class="footer-note">Hook Rate = reproducciones a 2s / Impresiones. Hold Rate = ThruPlays / reproducciones a 2s.</p>
+    <p class="footer-note">Hook Rate = reproducciones de vídeo / Impresiones. Hold Rate = ThruPlays / reproducciones. Solo aplica a anuncios en vídeo (los estáticos muestran 0%).</p>
   </div>
 
 
@@ -1578,6 +1586,7 @@ function renderCampaignsTable() {
   }
   const [from, to] = range;
   const typeFilter = document.getElementById('camp-type').value;
+  const statusFilter = document.getElementById('camp-status-filter').value;
 
   const byCampaign = {};
   DATA.campaignsRaw.forEach(r => {
@@ -1585,6 +1594,7 @@ function renderCampaignsTable() {
     if (date < from || date > to) return;
     if (campSelected.size > 0 && !campSelected.has(campaign)) return;
     if (typeFilter !== 'all' && campaignType[campaign] !== typeFilter) return;
+    if (statusFilter !== 'all' && ((DATA.campaignStatus && DATA.campaignStatus[campaign]) || '').toUpperCase() !== statusFilter) return;
     if (!byCampaign[campaign]) byCampaign[campaign] = {spend:0, revenue:0, purchases:0, leads:0, outbound:0, impressions:0, reach:0, visits:0};
     const b = byCampaign[campaign];
     b.spend+=spend; b.revenue+=revenue; b.purchases+=purchases; b.leads+=leads;
@@ -1620,6 +1630,7 @@ function renderCampaignsTable() {
     if (date < from || date > to) return;
     if (campSelected.size > 0 && !campSelected.has(campaign)) return;
     if (typeFilter !== 'all' && campaignType[campaign] !== typeFilter) return;
+    if (statusFilter !== 'all' && ((DATA.adsetStatus && DATA.adsetStatus[adset]) || '').toUpperCase() !== statusFilter) return;
     if (!byAdset[adset]) byAdset[adset] = {spend:0, revenue:0, purchases:0, leads:0, outbound:0, impressions:0, reach:0, visits:0};
     const b = byAdset[adset];
     b.spend+=spend; b.revenue+=revenue; b.purchases+=purchases; b.leads+=leads;
@@ -1654,6 +1665,7 @@ function renderCampaignsTable() {
     if (date < from || date > to) return;
     if (campSelected.size > 0 && !campSelected.has(campaign)) return;
     if (typeFilter !== 'all' && campaignType[campaign] !== typeFilter) return;
+    if (statusFilter !== 'all' && ((DATA.adStatus && DATA.adStatus[ad]) || '').toUpperCase() !== statusFilter) return;
     if (!byAd[ad]) byAd[ad] = {spend:0, revenue:0, purchases:0, leads:0, outbound:0, impressions:0, reach:0, visits:0, hookNum:0, holdNum:0};
     const b = byAd[ad];
     b.spend+=spend; b.revenue+=revenue; b.purchases+=purchases; b.leads+=leads;
