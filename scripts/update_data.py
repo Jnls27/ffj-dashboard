@@ -196,9 +196,7 @@ def build_meta_data(period_to_iso):
         a["impressions"] += to_float(r.get("impressions"))
         a["reach"] += to_float(r.get("reach"))
         a["visits"] += to_float(r.get("actions_landing_page_view"))
-    dailyRaw = [[d, a["spend"], a["revenue"], a["purchases"], a["leads"],
-                 a["outbound"], a["impressions"], a["reach"], a["visits"]]
-                for d, a in sorted(daily_by_date.items())]
+    dailyRaw = [{"date": d, **a} for d, a in sorted(daily_by_date.items())]
 
     # --- last7d / prev7d (llamadas separadas, sin dimension date, para
     #     que frequency/reach sean exactos por periodo, no sumados) ---
@@ -300,9 +298,7 @@ def build_meta_data(period_to_iso):
         a["impressions"] += to_float(r.get("impressions"))
         a["reach"] += to_float(r.get("reach"))
         a["visits"] += to_float(r.get("actions_landing_page_view"))
-    dailyRaw2025 = [[d, a["spend"], a["revenue"], a["purchases"], a["leads"],
-                     a["outbound"], a["impressions"], a["reach"], a["visits"]]
-                    for d, a in sorted(daily_2025_by_date.items())]
+    dailyRaw2025 = [{"date": d, **a} for d, a in sorted(daily_2025_by_date.items())]
 
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -377,9 +373,7 @@ def build_tt_data(period_to_iso):
             a["reach"] += to_float(r.get("reach"))
             a["visits"] += to_float(r.get("total_landing_page_view"))
         cur = nxt
-    dailyRaw = [[d, a["spend"], a["revenue"], a["purchases"], a["leads"],
-                 a["outbound"], a["impressions"], a["reach"], a["visits"]]
-                for d, a in sorted(daily_by_date.items())]
+    dailyRaw = [{"date": d, **a} for d, a in sorted(daily_by_date.items())]
 
     # last7d/prev7d: agregados client-side desde dailyRaw ya fusionado
     # (simplificación deliberada, ver playbook: reach semanal de TikTok es
@@ -500,9 +494,7 @@ def build_tt_data(period_to_iso):
             a["reach"] += to_float(r.get("reach"))
             a["visits"] += to_float(r.get("total_landing_page_view"))
         cur = nxt
-    dailyRaw2025 = [[d, a["spend"], a["revenue"], a["purchases"], a["leads"],
-                     a["outbound"], a["impressions"], a["reach"], a["visits"]]
-                    for d, a in sorted(daily2025_by_date.items())]
+    dailyRaw2025 = [{"date": d, **a} for d, a in sorted(daily2025_by_date.items())]
 
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
