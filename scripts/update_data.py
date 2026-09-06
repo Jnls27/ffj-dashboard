@@ -320,13 +320,14 @@ def build_meta_data(period_to_iso):
         ])
 
     # --- anuncios/creatividades (date + campaign + adset + ad) ---
-    # Hook Rate = reproducciones a 2s / Impresiones; Hold Rate = ThruPlays / reproducciones a 2s
-    # (definición aproximada; Meta no expone un campo literal "3 segundos" en Windsor.ai).
+    # Hook Rate = reproducciones de vídeo / Impresiones; Hold Rate = ThruPlays / reproducciones
+    # (el campo "vistas a 2s" de Meta devuelve siempre 0 en esta cuenta -- comprobado
+    # con una llamada real a Windsor.ai el 07/09/2026 -- por eso se usa "video plays").
     print("  fetch anuncios/creatividades...")
     AD_FIELDS = META_FIELDS + [
         "campaign", "adset_name", "ad_name", "effective_status",
         "thumbnail_url", "website_destination_url",
-        "video_continuous_2_sec_watched_actions_video_view",
+        "video_play_actions_video_view",
         "video_thruplay_watched_actions_video_view",
     ]
     ad_rows = windsor_get("facebook", AD_FIELDS, accounts=[META_ACCOUNT],
@@ -361,7 +362,7 @@ def build_meta_data(period_to_iso):
             to_float(r.get("impressions")),
             to_float(r.get("reach")),
             to_float(r.get("actions_landing_page_view")),
-            to_float(r.get("video_continuous_2_sec_watched_actions_video_view")),
+            to_float(r.get("video_play_actions_video_view")),
             to_float(r.get("video_thruplay_watched_actions_video_view")),
         ])
 
