@@ -60,7 +60,17 @@ def windsor_get(connector, fields, accounts=None, date_from=None, date_to=None,
         "fields": ",".join(fields),
     }
     if accounts:
-        params["account_id"] = ",".join(accounts) if isinstance(accounts, list) else accounts
+        # IMPORTANTE: "account_id" no es un parámetro de filtro válido en la
+        # API REST de Windsor.ai (solo es un campo de datos más, como
+        # "campaign" o "date"). Para restringir a una cuenta concreta hay
+        # que usar el mecanismo genérico de filtros, o si no, Windsor
+        # devuelve TODAS las cuentas conectadas de ese conector mezcladas
+        # -- bug real detectado el 06/09/2026 (cifras ~20x infladas).
+        acc_list = accounts if isinstance(accounts, list) else [accounts]
+        if len(acc_list) == 1:
+            params["filter"] = json.dumps([["account_id", "eq", acc_list[0]]])
+        else:
+            params["filter"] = json.dumps([["account_id", "in", json.dumps(acc_list)]])
     if date_from:
         params["date_from"] = date_from
     if date_to:
@@ -198,7 +208,11 @@ def build_meta_data(period_to_iso):
     prev7_to = (to_d - timedelta(days=7)).isoformat()
     prev7_from = (to_d - timedelta(days=13)).isoformat()
     last7d = derive(fetch_meta_period_agg(last7_from, period_to_iso))
+    last7d["from"] = last7_from
+    last7d["to"] = period_to_iso
     prev7d = derive(fetch_meta_period_agg(prev7_from, prev7_to))
+    prev7d["from"] = prev7_from
+    prev7d["to"] = prev7_to
 
     # --- meses (una llamada por mes, sin dimension date) ---
     print("  fetch mensual (rows)...")
@@ -382,7 +396,11 @@ def build_tt_data(period_to_iso):
     prev7_to = (to_d - timedelta(days=7)).isoformat()
     prev7_from = (to_d - timedelta(days=13)).isoformat()
     last7d = derive(agg_range(daily_by_date, last7_from, period_to_iso))
+    last7d["from"] = last7_from
+    last7d["to"] = period_to_iso
     prev7d = derive(agg_range(daily_by_date, prev7_from, prev7_to))
+    prev7d["from"] = prev7_from
+    prev7d["to"] = prev7_to
 
     # meses y semanas: agregados client-side desde dailyRaw
     months = []
