@@ -1042,8 +1042,8 @@ function buildTable(tableId, rowsObj, labelsArr, firstColLabel) {
   tbody += '</tbody>';
   table.innerHTML = thead + tbody;
 }
-buildTable('data-table', DATA.rows, DATA.months, 'Mes');
-buildTable('data-table-w', DATA.weekly.rows, DATA.weekly.labels, 'Semana');
+try { buildTable('data-table', DATA.rows, DATA.months, 'Mes'); } catch(e) { console.error('Fallo en: Meta mensual', e); }
+try { buildTable('data-table-w', DATA.weekly.rows, DATA.weekly.labels, 'Semana'); } catch(e) { console.error('Fallo en: Meta semanal', e); }
 document.getElementById('period-label-w').textContent = document.getElementById('period-label').textContent;
 
 /* ============ DAILY TAB: always last 30 days up to yesterday ============ */
@@ -1078,9 +1078,10 @@ const daily30Totals = last30Raw.reduce((acc,d) => {
 }, {spend:0, revenue:0, purchases:0, leads:0, outbound:0, impressions:0, reach:0, visits:0});
 dailyRows["Total"] = deriveDay(daily30Totals);
 
-buildTable('data-table-d', dailyRows, days_, 'Día');
-document.getElementById('period-label-d').textContent =
-  '(' + fmtDate(last30Raw[0].date) + ' — ' + fmtDate(last30Raw[last30Raw.length-1].date) + ')';
+try { buildTable('data-table-d', dailyRows, days_, 'Día'); } catch(e) { console.error('Fallo en: Meta diario', e); }
+document.getElementById('period-label-d').textContent = last30Raw.length
+  ? '(' + fmtDate(last30Raw[0].date) + ' — ' + fmtDate(last30Raw[last30Raw.length-1].date) + ')'
+  : '(sin datos diarios)';
 
 /* ============ TABS ============ */
 const TABS = ['mensual', 'semanal', 'diario', 'campanas', 'comparativa', 'insights'];
@@ -1362,7 +1363,9 @@ drawMultiLineChart('chart-ctrcr-purchases-d', 'legend-ctrcr-purchases-d', [
 ], days_, fmtPct, dailyWidth);
 
 /* ============ CAMPAIGNS & CREATIVES TAB ============ */
-const LAST_DATE_ISO = DATA.campaignsRaw.reduce((max,r) => r[0] > max ? r[0] : max, DATA.campaignsRaw[0][0]);
+const LAST_DATE_ISO = DATA.campaignsRaw.length
+  ? DATA.campaignsRaw.reduce((max,r) => r[0] > max ? r[0] : max, DATA.campaignsRaw[0][0])
+  : DATA.period_to;
 
 /* ============ CAMPAIGN TYPE CLASSIFICATION ============ */
 function classifyCampaign(name) {
@@ -1517,7 +1520,7 @@ function renderCampaignsTable() {
 buildCampMultiselect();
 document.getElementById('camp-date-from').value = DATA.period_from;
 document.getElementById('camp-date-to').value = LAST_DATE_ISO;
-renderCampaignsTable();
+try { renderCampaignsTable(); } catch(e) { console.error('Fallo en: Meta campañas (init)', e); }
 
 /* ============ COMPARATIVA 2025 TAB ============ */
 const comparisonDirections = {
@@ -1589,7 +1592,7 @@ function renderComparativaTable() {
 }
 document.getElementById('cmp-date-from').value = DATA.period_from;
 document.getElementById('cmp-date-to').value = LAST_DATE_ISO;
-renderComparativaTable();
+try { renderComparativaTable(); } catch(e) { console.error('Fallo en: Meta comparativa 2025 (init)', e); }
 
 
 
@@ -1725,7 +1728,7 @@ function renderInsights() {
     document.getElementById(labelIds[t]).textContent = '(' + fmtDate(from) + ' — ' + fmtDate(to) + ')';
   });
 }
-renderInsights();
+try { renderInsights(); } catch(e) { console.error('Fallo en: Meta insights', e); }
 
 
 /* ================================================================ */
@@ -1750,8 +1753,8 @@ document.getElementById('stat-period-label-tt').textContent =
   fmtDate(last7Tt.from) + ' – ' + fmtDate(last7Tt.to) + ' vs. periodo anterior (' + fmtDate(prev7Tt.from) + ' – ' + fmtDate(prev7Tt.to) + ')';
 
 /* ---- Monthly / weekly tables ---- */
-buildTable('data-table-tt', DATA_TT.rows, DATA_TT.months, 'Mes');
-buildTable('data-table-w-tt', DATA_TT.weekly.rows, DATA_TT.weekly.labels, 'Semana');
+try { buildTable('data-table-tt', DATA_TT.rows, DATA_TT.months, 'Mes'); } catch(e) { console.error('Fallo en: TikTok mensual', e); }
+try { buildTable('data-table-w-tt', DATA_TT.weekly.rows, DATA_TT.weekly.labels, 'Semana'); } catch(e) { console.error('Fallo en: TikTok semanal', e); }
 document.getElementById('period-label-w-tt').textContent = document.getElementById('period-label-tt').textContent;
 
 /* ---- Daily tab: last 30 days up to yesterday ---- */
@@ -1765,9 +1768,10 @@ const daily30TotalsTt = last30RawTt.reduce((acc,d) => {
   return acc;
 }, {spend:0, revenue:0, purchases:0, leads:0, outbound:0, impressions:0, reach:0, visits:0});
 dailyRowsTt["Total"] = deriveDay(daily30TotalsTt);
-buildTable('data-table-d-tt', dailyRowsTt, daysTt_, 'Día');
-document.getElementById('period-label-d-tt').textContent =
-  '(' + fmtDate(last30RawTt[0].date) + ' — ' + fmtDate(last30RawTt[last30RawTt.length-1].date) + ')';
+try { buildTable('data-table-d-tt', dailyRowsTt, daysTt_, 'Día'); } catch(e) { console.error('Fallo en: TikTok diario', e); }
+document.getElementById('period-label-d-tt').textContent = last30RawTt.length
+  ? '(' + fmtDate(last30RawTt[0].date) + ' — ' + fmtDate(last30RawTt[last30RawTt.length-1].date) + ')'
+  : '(sin datos diarios)';
 
 /* ---- Tabs ---- */
 const TABS_TT = ['mensual', 'semanal', 'diario', 'campanas', 'comparativa', 'insights'];
@@ -1839,7 +1843,9 @@ drawMultiLineChart('chart-ctrcr-purchases-d-tt', 'legend-ctrcr-purchases-d-tt', 
 ], daysTt_, fmtPct, dailyWidthTt);
 
 /* ---- Campaigns tab (TikTok) ---- */
-const LAST_DATE_ISO_TT = DATA_TT.campaignsRaw.reduce((max,r) => r[0] > max ? r[0] : max, DATA_TT.campaignsRaw[0][0]);
+const LAST_DATE_ISO_TT = DATA_TT.campaignsRaw.length
+  ? DATA_TT.campaignsRaw.reduce((max,r) => r[0] > max ? r[0] : max, DATA_TT.campaignsRaw[0][0])
+  : DATA_TT.period_to;
 const LAST_DATE_TT = new Date(LAST_DATE_ISO_TT + 'T00:00:00');
 DATA_TT.campaignsList.forEach(c => { if (!(c in campaignType)) campaignType[c] = classifyCampaign(c); });
 
@@ -1953,7 +1959,7 @@ function renderCampaignsTableTt() {
 buildCampMultiselectTt();
 document.getElementById('camp-date-from-tt').value = DATA_TT.period_from;
 document.getElementById('camp-date-to-tt').value = LAST_DATE_ISO_TT;
-renderCampaignsTableTt();
+try { renderCampaignsTableTt(); } catch(e) { console.error('Fallo en: TikTok campañas (init)', e); }
 
 /* ---- Comparativa 2025 tab (TikTok) ---- */
 function onCmpDatePresetChangeTt() {
@@ -1985,7 +1991,7 @@ function renderComparativaTableTt() {
 }
 document.getElementById('cmp-date-from-tt').value = DATA_TT.period_from;
 document.getElementById('cmp-date-to-tt').value = LAST_DATE_ISO_TT;
-renderComparativaTableTt();
+try { renderComparativaTableTt(); } catch(e) { console.error('Fallo en: TikTok comparativa 2025 (init)', e); }
 
 /* ---- Insights tab (TikTok) ---- */
 function aggregateCampaignsByTypeTt(from, to, type) {
@@ -2037,7 +2043,7 @@ function renderInsightsTt() {
     document.getElementById(labelIds[t]).textContent = '(' + fmtDate(from) + ' — ' + fmtDate(to) + ')';
   });
 }
-renderInsightsTt();
+try { renderInsightsTt(); } catch(e) { console.error('Fallo en: TikTok insights', e); }
 
 /* ---- Platform switcher ---- */
 function switchPlatform(p) {
