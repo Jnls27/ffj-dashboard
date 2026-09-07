@@ -190,6 +190,25 @@
   .dest-link { font-size:11px; color: var(--series-1); text-decoration:none; }
   .dest-link:hover { text-decoration:underline; }
 
+  /* Creatividades: miniatura más grande y pegada al nombre, con truncado */
+  .creative-cell-lg { display:flex; align-items:center; gap:6px; }
+  .creative-thumb-lg {
+    width:64px; height:64px; border-radius:10px; background: var(--gridline);
+    object-fit: cover; flex-shrink:0; border:1px solid var(--border);
+  }
+  .creative-name-truncate {
+    max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+
+  .table-pagination { display:flex; align-items:center; justify-content:center; gap:16px; padding:10px 0; }
+  .page-btn {
+    font-family:inherit; font-size:12.5px; font-weight:600; color: var(--series-1);
+    background:none; border:1px solid var(--border); border-radius:8px; padding:5px 12px; cursor:pointer;
+  }
+  .page-btn:hover:not(:disabled) { border-color: var(--baseline); }
+  .page-btn:disabled { opacity:0.4; cursor:not-allowed; color: var(--text-muted); }
+  .page-info { font-size:12.5px; color: var(--text-secondary); }
+
   table.sortable thead th { cursor:pointer; user-select:none; }
   table.sortable thead th:hover { color: var(--text-primary); }
   table.sortable thead th .sort-arrow { font-size:9px; margin-left:3px; opacity:0.45; }
@@ -698,6 +717,23 @@
           <div class="multiselect-panel" id="creativ-multiselect-panel" style="display:none;"></div>
         </div>
       </div>
+      <div class="filter-field">
+        <label for="creativ-status-filter">Estado</label>
+        <select id="creativ-status-filter" onchange="renderCreatividadesTable()">
+          <option value="all" selected>Todos</option>
+          <option value="ACTIVE">Activos</option>
+          <option value="PAUSED">Pausados</option>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label for="creativ-audience-filter">Audiencia</label>
+        <select id="creativ-audience-filter" onchange="renderCreatividadesTable()">
+          <option value="all" selected>Todas</option>
+          <option value="Prospecting">Prospecting</option>
+          <option value="Retargeting">Retargeting</option>
+          <option value="Sin clasificar">Sin clasificar</option>
+        </select>
+      </div>
     </div>
   </div>
 
@@ -706,7 +742,12 @@
     <div class="table-scroll">
       <table id="data-table-creativ"></table>
     </div>
-    <p class="footer-note">Mismas columnas y fórmulas SUM/SUM que la tabla Mensual, una fila por anuncio. Hook Rate = reproducciones de vídeo / Impresiones. Hold Rate = ThruPlays / reproducciones (solo aplica a anuncios en vídeo). Haz clic en cualquier columna para ordenar.</p>
+    <p class="footer-note">Hook Rate = reproducciones de vídeo / Impresiones. Hold Rate = ThruPlays / reproducciones (solo aplica a anuncios en vídeo). Audiencia se clasifica por el nombre de la campaña (contiene "pros" → Prospecting; contiene "ret"/"RT"/"retargeting" → Retargeting; si no, Sin clasificar — Windsor.ai no aporta el targeting real de la cuenta). Haz clic en cualquier columna para ordenar. 10 anuncios por página; el Total siempre refleja todos los anuncios filtrados.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Insights de creatividades <span class="period" id="creativ-insights-period-label"></span></h2>
+    <ul class="insights-list" id="ins-creativ"></ul>
   </div>
 
   </div><!-- /tab-creatividades -->
@@ -1773,7 +1814,7 @@ const tableCache = {}; // tableId -> {rowsObj, labelsArr, firstColLabel, colsUse
 function renderTableBody(tableId) {
   const c = tableCache[tableId];
   if (!c) return;
-  const { rowsObj, labelsArr, firstColLabel, colsUsed, nameCellFn, sortKey, sortDir } = c;
+  const { rowsObj, labelsArr, firstColLabel, colsUsed, nameCellFn, sortKey, sortDir, pageSize } = c;
   let sortedLabels = labelsArr.slice();
   if (sortKey) {
     sortedLabels.sort((a,b) => {
@@ -1786,6 +1827,18 @@ function renderTableBody(tableId) {
       return 0;
     });
   }
+
+  // Paginación opcional (solo cuando opts.pageSize se pasó al construir la tabla).
+  let pageLabels = sortedLabels;
+  let totalPages = 1;
+  if (pageSize) {
+    totalPages = Math.max(1, Math.ceil(sortedLabels.length / pageSize));
+    if (!c.page || c.page < 1) c.page = 1;
+    if (c.page > totalPages) c.page = totalPages;
+    const startIdx = (c.page - 1) * pageSize;
+    pageLabels = sortedLabels.slice(startIdx, startIdx + pageSize);
+  }
+
   const table = document.getElementById(tableId);
   function thHtml(key, label) {
     const isSorted = sortKey === key;
@@ -1794,10 +1847,18 @@ function renderTableBody(tableId) {
   }
   let thead = `<thead><tr>${thHtml('__name__', firstColLabel)}${colsUsed.map(cc=>thHtml(cc.key, cc.label)).join('')}</tr></thead>`;
   let tbody = '<tbody>';
-  sortedLabels.forEach(lab => {
+  pageLabels.forEach(lab => {
     const r = rowsObj[lab];
     tbody += `<tr><td class="month-cell">${nameCellFn(lab, r)}</td>` + colsUsed.map(cc => `<td>${cc.fmt(r[cc.key])}</td>`).join('') + '</tr>';
   });
+  if (pageSize && sortedLabels.length > 0) {
+    const ncols = colsUsed.length + 1;
+    tbody += `<tr class="pagination-row"><td colspan="${ncols}"><div class="table-pagination">` +
+      `<button type="button" class="page-btn" data-dir="-1" ${c.page<=1?'disabled':''}>‹ Anterior</button>` +
+      `<span class="page-info">Página ${c.page} de ${totalPages}</span>` +
+      `<button type="button" class="page-btn" data-dir="1" ${c.page>=totalPages?'disabled':''}>Siguiente ›</button>` +
+      `</div></td></tr>`;
+  }
   const tr = rowsObj["Total"];
   tbody += `<tr class="total-row"><td class="month-cell">Total</td>` + colsUsed.map(cc => `<td>${cc.key==='status'||cc.key==='dest'?'':cc.fmt(tr[cc.key])}</td>`).join('') + '</tr>';
   tbody += '</tbody>';
@@ -1807,9 +1868,18 @@ function renderTableBody(tableId) {
     th.addEventListener('click', () => {
       const key = th.dataset.key;
       if (c.sortKey === key) { c.sortDir *= -1; } else { c.sortKey = key; c.sortDir = 1; }
+      c.page = 1;
       renderTableBody(tableId);
     });
   });
+  if (pageSize) {
+    table.querySelectorAll('.page-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        c.page = (c.page || 1) + parseInt(btn.dataset.dir, 10);
+        renderTableBody(tableId);
+      });
+    });
+  }
 }
 
 function buildCampaignsTable(tableId, rowsObj, labelsArr, firstColLabel, opts) {
@@ -1821,6 +1891,8 @@ function buildCampaignsTable(tableId, rowsObj, labelsArr, firstColLabel, opts) {
     rowsObj, labelsArr: labelsArr.filter(l => l !== 'Total'), firstColLabel, colsUsed, nameCellFn,
     sortKey: prev ? prev.sortKey : null,
     sortDir: prev ? prev.sortDir : 1,
+    pageSize: opts.pageSize || null,
+    page: 1,
   };
   renderTableBody(tableId);
 }
@@ -2142,13 +2214,35 @@ document.getElementById('land-date-to').value = LAST_DATE_ISO;
 try { renderLandingsTable(); } catch(e) { console.error('Fallo en: Meta landings (init)', e); }
 
 /* ============ CREATIVIDADES TAB (una fila por anuncio, con filtro de campaña) ============ */
+/* Clasificación de audiencia por nombre de campaña (prioridad: pros > ret/RT/retargeting > sin clasificar).
+   Windsor.ai no aporta el targeting real de la cuenta, así que esto es solo heurística de nombre. */
+function classifyAudience(name) {
+  const n = (name || '').toLowerCase();
+  if (n.includes('pros')) return 'Prospecting';
+  if (n.includes('retargeting')) return 'Retargeting';
+  if (/(^|[^a-z0-9])(ret|rt)($|[^a-z0-9])/.test(n)) return 'Retargeting';
+  return 'Sin clasificar';
+}
+const audienceType = {};
+DATA.campaignsList.forEach(c => { audienceType[c] = classifyAudience(c); });
+
 const creativCols = [
-  {key:'adName', label:'Anuncio', fmt: v => v || '—'},
   {key:'dest', label:'Destino', fmt: v => v ? `<a class="dest-link" href="${v}" target="_blank" rel="noopener">Ver enlace ↗</a>` : '—'},
-  ...cols,
+  {key:'status', label:'Estado', fmt: statusPill},
+  {key:'spend', label:'Inversión', fmt: fmtEUR},
   {key:'hook_rate', label:'Hook Rate', fmt: fmtPct},
   {key:'hold_rate', label:'Hold Rate', fmt: fmtPct},
+  {key:'ctr', label:'CTR sal.', fmt: fmtPct},
+  {key:'cpc', label:'CPC sal.', fmt: fmtEUR2},
+  {key:'cr_purchase', label:'CR Compra', fmt: fmtPct},
+  {key:'cr_lead', label:'CR Lead', fmt: fmtPct},
+  {key:'cpa', label:'CPA', fmt: fmtEUR2},
+  {key:'cpl', label:'CPL', fmt: fmtEUR2},
+  {key:'visits', label:'Visitas', fmt: fmtNum},
+  {key:'frequency', label:'Frecuencia', fmt: fmtNum2},
+  {key:'aov', label:'AOV', fmt: fmtEUR2},
 ];
+const CREATIV_PAGE_SIZE = 10;
 const creativSelected = new Set(); // empty = "todas"
 let creativMultiselectOpen = false;
 
@@ -2201,6 +2295,57 @@ function updateCreativMultiselectLabel() {
   else btn.textContent = creativSelected.size + ' campañas seleccionadas';
 }
 
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function buildCreativInsights(adNames, rowsObjAd) {
+  const active = adNames.filter(a => a !== 'Total' && rowsObjAd[a]);
+  if (!active.length) return [];
+  const items = [];
+
+  const byHook = active.slice().sort((a,b) => rowsObjAd[b].hook_rate - rowsObjAd[a].hook_rate)[0];
+  items.push(`La creatividad con mejor <strong>Hook Rate</strong> es <strong>${escapeHtml(byHook)}</strong>, con un ${fmtPct(rowsObjAd[byHook].hook_rate)} — es la que mejor capta la atención en los primeros segundos.`);
+
+  const byCtr = active.slice().sort((a,b) => rowsObjAd[b].ctr - rowsObjAd[a].ctr)[0];
+  items.push(`El mejor <strong>CTR saliente</strong> lo tiene <strong>${escapeHtml(byCtr)}</strong>, con un ${fmtPct(rowsObjAd[byCtr].ctr)}.`);
+
+  const bySpend = active.slice().sort((a,b) => rowsObjAd[b].spend - rowsObjAd[a].spend)[0];
+  items.push(`La creatividad con mayor <strong>inversión</strong> es <strong>${escapeHtml(bySpend)}</strong>, con ${fmtEUR(rowsObjAd[bySpend].spend)} invertidos en el periodo.`);
+
+  const totalSpend = active.reduce((s,a) => s + rowsObjAd[a].spend, 0);
+  const avgSpend = totalSpend / active.length;
+  const noConversion = active
+    .filter(a => rowsObjAd[a].spend >= avgSpend && rowsObjAd[a].spend > 0 && (rowsObjAd[a].purchases + rowsObjAd[a].leads) === 0)
+    .sort((a,b) => rowsObjAd[b].spend - rowsObjAd[a].spend);
+  if (noConversion.length) {
+    const cand = noConversion[0];
+    items.push(`<strong>${escapeHtml(cand)}</strong> ha gastado ${fmtEUR(rowsObjAd[cand].spend)} (por encima de la media de ${fmtEUR(avgSpend)}) sin generar ni compras ni leads — candidata a pausar o revisar creatividad.`);
+  } else {
+    const withConv = active.filter(a => rowsObjAd[a].spend >= avgSpend && (rowsObjAd[a].purchases > 0 || rowsObjAd[a].leads > 0));
+    if (withConv.length) {
+      const worst = withConv.slice().sort((a,b) => {
+        const ca = rowsObjAd[a].purchases > 0 ? rowsObjAd[a].cpa : rowsObjAd[a].cpl;
+        const cb = rowsObjAd[b].purchases > 0 ? rowsObjAd[b].cpa : rowsObjAd[b].cpl;
+        return cb - ca;
+      })[0];
+      const rw = rowsObjAd[worst];
+      const metricLabel = rw.purchases > 0 ? 'CPA' : 'CPL';
+      const metricVal = rw.purchases > 0 ? rw.cpa : rw.cpl;
+      items.push(`<strong>${escapeHtml(worst)}</strong> tiene un gasto por encima de la media (${fmtEUR(rw.spend)}) con un ${metricLabel} elevado de ${fmtEUR2(metricVal)} — conviene revisar su rendimiento.`);
+    }
+  }
+
+  const highFreq = active
+    .filter(a => rowsObjAd[a].frequency >= 3)
+    .sort((a,b) => rowsObjAd[b].frequency - rowsObjAd[a].frequency)[0];
+  if (highFreq) {
+    items.push(`<strong>${escapeHtml(highFreq)}</strong> tiene una frecuencia de ${fmtNum2(rowsObjAd[highFreq].frequency)}, señal de posible fatiga de anuncio — vigilar su rendimiento en los próximos días.`);
+  }
+
+  return items;
+}
+
 function renderCreatividadesTable() {
   const preset = document.getElementById('creativ-date-preset').value;
   let range = resolveCampDateRange(preset);
@@ -2212,6 +2357,8 @@ function renderCreatividadesTable() {
   }
   const [from, to] = range;
   const typeFilter = document.getElementById('creativ-type').value;
+  const statusFilter = document.getElementById('creativ-status-filter').value;
+  const audienceFilter = document.getElementById('creativ-audience-filter').value;
 
   const byAd = {};
   (DATA.adsRaw || []).forEach(r => {
@@ -2219,6 +2366,8 @@ function renderCreatividadesTable() {
     if (date < from || date > to) return;
     if (typeFilter !== 'all' && campaignType[campaign] !== typeFilter) return;
     if (creativSelected.size > 0 && !creativSelected.has(campaign)) return;
+    if (statusFilter !== 'all' && ((DATA.adStatus && DATA.adStatus[ad]) || '').toUpperCase() !== statusFilter) return;
+    if (audienceFilter !== 'all' && audienceType[campaign] !== audienceFilter) return;
     if (!byAd[ad]) byAd[ad] = {spend:0, revenue:0, purchases:0, leads:0, outbound:0, impressions:0, reach:0, visits:0, hookNum:0, holdNum:0};
     const b = byAd[ad];
     b.spend+=spend; b.revenue+=revenue; b.purchases+=purchases; b.leads+=leads;
@@ -2235,6 +2384,7 @@ function renderCreatividadesTable() {
     r.hold_rate = b.hookNum ? b.holdNum / b.hookNum * 100 : 0;
     r.dest = DATA.adMeta && DATA.adMeta[ad] ? DATA.adMeta[ad].destination_url : '';
     r.thumb = DATA.adMeta && DATA.adMeta[ad] ? DATA.adMeta[ad].thumbnail_url : '';
+    r.status = DATA.adStatus ? DATA.adStatus[ad] : null;
     r.adName = ad;
     rowsObjAd[ad] = r;
   });
@@ -2252,12 +2402,19 @@ function renderCreatividadesTable() {
   if (adNames.length === 0) {
     document.getElementById('data-table-creativ').innerHTML = '<tbody><tr><td style="padding:16px;color:var(--text-muted);">Sin datos para este periodo/selección.</td></tr></tbody>';
   } else {
-    buildCampaignsTable('data-table-creativ', rowsObjAd, adNames, 'Miniatura', {
+    buildCampaignsTable('data-table-creativ', rowsObjAd, adNames, 'Anuncio', {
       cols: creativCols,
-      nameCellFn: (lab, r) => r && r.thumb ? `<img class="creative-thumb" src="${r.thumb}" alt="">` : '<div class="creative-thumb"></div>',
+      pageSize: CREATIV_PAGE_SIZE,
+      nameCellFn: (lab, r) => {
+        const thumbHtml = r && r.thumb ? `<img class="creative-thumb creative-thumb-lg" src="${r.thumb}" alt="">` : '<div class="creative-thumb creative-thumb-lg"></div>';
+        const name = (r && r.adName) || lab;
+        return `<div class="creative-cell creative-cell-lg">${thumbHtml}<span class="creative-name-truncate" title="${escapeHtml(name)}">${escapeHtml(name)}</span></div>`;
+      },
     });
   }
   document.getElementById('creativ-period-label').textContent = '(' + fmtDate(from) + ' — ' + fmtDate(to) + ')';
+  document.getElementById('creativ-insights-period-label').textContent = document.getElementById('creativ-period-label').textContent;
+  renderList('ins-creativ', buildCreativInsights(adNames, rowsObjAd), 'Sin datos suficientes para este periodo/selección.');
 }
 
 buildCreativMultiselect();
@@ -2423,9 +2580,9 @@ function buildTypeInsights(type, curr, prev) {
   return items;
 }
 
-function renderList(id, items) {
+function renderList(id, items, emptyMsg) {
   const el = document.getElementById(id);
-  if (!items.length) { el.innerHTML = '<li class="insights-empty">Sin datos suficientes para esta semana.</li>'; return; }
+  if (!items.length) { el.innerHTML = `<li class="insights-empty">${emptyMsg || 'Sin datos suficientes para esta semana.'}</li>`; return; }
   el.innerHTML = items.map(t => `<li>${t}</li>`).join('');
 }
 
