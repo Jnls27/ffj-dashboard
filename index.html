@@ -234,6 +234,7 @@
     <button class="tab-btn" data-tab="diario" onclick="switchTab('diario')">Diario</button>
     <button class="tab-btn" data-tab="campanas" onclick="switchTab('campanas')">Campañas</button>
     <button class="tab-btn" data-tab="landings" onclick="switchTab('landings')">Landings</button>
+    <button class="tab-btn" data-tab="creatividades" onclick="switchTab('creatividades')">Creatividades</button>
     <button class="tab-btn" data-tab="comparativa" onclick="switchTab('comparativa')">Comparativa 2025</button>
     <button class="tab-btn" data-tab="insights" onclick="switchTab('insights')">Insights</button>
   </div>
@@ -656,6 +657,59 @@
   </div>
 
   </div><!-- /tab-landings -->
+
+  <div id="tab-creatividades" class="tab-panel" style="display:none;">
+
+  <div class="panel">
+    <div class="filter-bar">
+      <div class="filter-field">
+        <label for="creativ-date-preset">Periodo</label>
+        <select id="creativ-date-preset" onchange="onCreativDatePresetChange()">
+          <option value="today">Hoy</option>
+          <option value="yesterday">Ayer</option>
+          <option value="last7">Últimos 7 días</option>
+          <option value="last30">Últimos 30 días</option>
+          <option value="thismonth">Este mes</option>
+          <option value="lastmonth">Mes anterior</option>
+          <option value="ytd" selected>Todo 2026</option>
+          <option value="custom">Personalizado…</option>
+        </select>
+      </div>
+      <div class="filter-field" id="creativ-custom-range" style="display:none;">
+        <label for="creativ-date-from">Desde</label>
+        <input type="date" id="creativ-date-from" onchange="renderCreatividadesTable()">
+        <label for="creativ-date-to">Hasta</label>
+        <input type="date" id="creativ-date-to" onchange="renderCreatividadesTable()">
+      </div>
+      <div class="filter-field">
+        <label for="creativ-type">Tipo de campaña</label>
+        <select id="creativ-type" onchange="onCreativTypeChange()">
+          <option value="all" selected>Todos</option>
+          <option value="Ecommerce">Ecommerce</option>
+          <option value="Suscripción">Suscripción</option>
+          <option value="Leads">Leads</option>
+          <option value="Otros">Otros</option>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label>Campaña</label>
+        <div class="multiselect" id="creativ-multiselect">
+          <button type="button" class="multiselect-btn" id="creativ-multiselect-btn" onclick="toggleCreativMultiselect()">Todas las campañas</button>
+          <div class="multiselect-panel" id="creativ-multiselect-panel" style="display:none;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Desglose por anuncio (creatividad) <span class="period" id="creativ-period-label"></span></h2>
+    <div class="table-scroll">
+      <table id="data-table-creativ"></table>
+    </div>
+    <p class="footer-note">Mismas columnas y fórmulas SUM/SUM que la tabla Mensual, una fila por anuncio. Hook Rate = reproducciones de vídeo / Impresiones. Hold Rate = ThruPlays / reproducciones (solo aplica a anuncios en vídeo). Haz clic en cualquier columna para ordenar.</p>
+  </div>
+
+  </div><!-- /tab-creatividades -->
 
   <div id="tab-comparativa" class="tab-panel" style="display:none;">
 
@@ -1415,7 +1469,7 @@ try { renderSemanalTable(); } catch(e) { console.error('Fallo en: Meta semanal',
 try { renderDiarioTable(); } catch(e) { console.error('Fallo en: Meta diario', e); }
 
 /* ============ TABS ============ */
-const TABS = ['mensual', 'semanal', 'diario', 'campanas', 'landings', 'comparativa', 'insights'];
+const TABS = ['mensual', 'semanal', 'diario', 'campanas', 'landings', 'creatividades', 'comparativa', 'insights'];
 function switchTab(tab) {
   TABS.forEach(t => {
     document.getElementById('tab-' + t).style.display = (t === tab) ? '' : 'none';
@@ -2069,7 +2123,7 @@ function renderLandingsTable() {
   LAND_GROUPS.forEach(g => { rowsObj[g] = deriveDay(byGroup[g]); sumAggJs(total, byGroup[g]); });
   rowsObj['Total'] = deriveDay(total);
 
-  buildTable('data-table-land', rowsObj, LAND_GROUPS, 'Destino');
+  buildCampaignsTable('data-table-land', rowsObj, LAND_GROUPS, 'Destino');
   document.getElementById('land-period-label').textContent = '(' + fmtDate(from) + ' — ' + fmtDate(to) + ')';
 
   const landKeys = Object.keys(byLanding).sort((a, b) => byLanding[b].spend - byLanding[a].spend);
@@ -2079,13 +2133,137 @@ function renderLandingsTable() {
   landKeys.forEach(k => { landRowsObj[landingLabels[k]] = deriveDay(byLanding[k]); sumAggJs(landTotal, byLanding[k]); });
   landRowsObj['Total'] = deriveDay(landTotal);
 
-  buildTable('data-table-land-detail', landRowsObj, landLabelsArr, 'Landing');
+  buildCampaignsTable('data-table-land-detail', landRowsObj, landLabelsArr, 'Landing');
   document.getElementById('land-detail-period-label').textContent = document.getElementById('land-period-label').textContent;
 }
 
 document.getElementById('land-date-from').value = DATA.period_from;
 document.getElementById('land-date-to').value = LAST_DATE_ISO;
 try { renderLandingsTable(); } catch(e) { console.error('Fallo en: Meta landings (init)', e); }
+
+/* ============ CREATIVIDADES TAB (una fila por anuncio, con filtro de campaña) ============ */
+const creativCols = [
+  {key:'adName', label:'Anuncio', fmt: v => v || '—'},
+  {key:'dest', label:'Destino', fmt: v => v ? `<a class="dest-link" href="${v}" target="_blank" rel="noopener">Ver enlace ↗</a>` : '—'},
+  ...cols,
+  {key:'hook_rate', label:'Hook Rate', fmt: fmtPct},
+  {key:'hold_rate', label:'Hold Rate', fmt: fmtPct},
+];
+const creativSelected = new Set(); // empty = "todas"
+let creativMultiselectOpen = false;
+
+function onCreativDatePresetChange() {
+  const preset = document.getElementById('creativ-date-preset').value;
+  document.getElementById('creativ-custom-range').style.display = preset === 'custom' ? 'flex' : 'none';
+  renderCreatividadesTable();
+}
+function onCreativTypeChange() { renderCreatividadesTable(); }
+
+function toggleCreativMultiselect() {
+  creativMultiselectOpen = !creativMultiselectOpen;
+  document.getElementById('creativ-multiselect-panel').style.display = creativMultiselectOpen ? 'block' : 'none';
+}
+document.addEventListener('click', (e) => {
+  if (creativMultiselectOpen && !document.getElementById('creativ-multiselect').contains(e.target)) {
+    creativMultiselectOpen = false;
+    document.getElementById('creativ-multiselect-panel').style.display = 'none';
+  }
+});
+function buildCreativMultiselect() {
+  const panel = document.getElementById('creativ-multiselect-panel');
+  let html = `<div class="multiselect-actions"><a onclick="creativSelectAll()">Todas</a><a onclick="creativSelectNone()">Ninguna</a></div>`;
+  DATA.campaignsList.forEach(c => {
+    html += `<label class="multiselect-option"><input type="checkbox" value="${c.replace(/"/g,'&quot;')}" onchange="onCreativCampCheckboxChange(this)"> ${c} <span class="type-badge">${campaignType[c]}</span></label>`;
+  });
+  panel.innerHTML = html;
+}
+function onCreativCampCheckboxChange(el) {
+  if (el.checked) creativSelected.add(el.value); else creativSelected.delete(el.value);
+  updateCreativMultiselectLabel();
+  renderCreatividadesTable();
+}
+window.creativSelectAll = function() {
+  creativSelected.clear();
+  document.querySelectorAll('#creativ-multiselect-panel input[type=checkbox]').forEach(cb => cb.checked = false);
+  updateCreativMultiselectLabel();
+  renderCreatividadesTable();
+};
+window.creativSelectNone = function() {
+  creativSelected.clear();
+  document.querySelectorAll('#creativ-multiselect-panel input[type=checkbox]').forEach(cb => { cb.checked = true; creativSelected.add(cb.value); });
+  updateCreativMultiselectLabel();
+  renderCreatividadesTable();
+};
+function updateCreativMultiselectLabel() {
+  const btn = document.getElementById('creativ-multiselect-btn');
+  if (creativSelected.size === 0) btn.textContent = 'Todas las campañas';
+  else if (creativSelected.size === 1) btn.textContent = [...creativSelected][0];
+  else btn.textContent = creativSelected.size + ' campañas seleccionadas';
+}
+
+function renderCreatividadesTable() {
+  const preset = document.getElementById('creativ-date-preset').value;
+  let range = resolveCampDateRange(preset);
+  if (!range) {
+    const from = document.getElementById('creativ-date-from').value;
+    const to = document.getElementById('creativ-date-to').value;
+    if (!from || !to) return;
+    range = [from, to];
+  }
+  const [from, to] = range;
+  const typeFilter = document.getElementById('creativ-type').value;
+
+  const byAd = {};
+  (DATA.adsRaw || []).forEach(r => {
+    const [date, campaign, adset, ad, spend, revenue, purchases, leads, outbound, impressions, reach, visits, hookNum, holdNum] = r;
+    if (date < from || date > to) return;
+    if (typeFilter !== 'all' && campaignType[campaign] !== typeFilter) return;
+    if (creativSelected.size > 0 && !creativSelected.has(campaign)) return;
+    if (!byAd[ad]) byAd[ad] = {spend:0, revenue:0, purchases:0, leads:0, outbound:0, impressions:0, reach:0, visits:0, hookNum:0, holdNum:0};
+    const b = byAd[ad];
+    b.spend+=spend; b.revenue+=revenue; b.purchases+=purchases; b.leads+=leads;
+    b.outbound+=outbound; b.impressions+=impressions; b.reach+=reach; b.visits+=visits;
+    b.hookNum+=hookNum; b.holdNum+=holdNum;
+  });
+
+  const adNames = Object.keys(byAd).sort((a,b) => byAd[b].spend - byAd[a].spend);
+  const rowsObjAd = {};
+  adNames.forEach(ad => {
+    const b = byAd[ad];
+    const r = deriveDay(b);
+    r.hook_rate = b.impressions ? b.hookNum / b.impressions * 100 : 0;
+    r.hold_rate = b.hookNum ? b.holdNum / b.hookNum * 100 : 0;
+    r.dest = DATA.adMeta && DATA.adMeta[ad] ? DATA.adMeta[ad].destination_url : '';
+    r.thumb = DATA.adMeta && DATA.adMeta[ad] ? DATA.adMeta[ad].thumbnail_url : '';
+    r.adName = ad;
+    rowsObjAd[ad] = r;
+  });
+  const grandTotalAd = Object.values(byAd).reduce((acc,b) => {
+    acc.spend+=b.spend; acc.revenue+=b.revenue; acc.purchases+=b.purchases; acc.leads+=b.leads;
+    acc.outbound+=b.outbound; acc.impressions+=b.impressions; acc.reach+=b.reach; acc.visits+=b.visits;
+    acc.hookNum+=b.hookNum; acc.holdNum+=b.holdNum;
+    return acc;
+  }, {spend:0, revenue:0, purchases:0, leads:0, outbound:0, impressions:0, reach:0, visits:0, hookNum:0, holdNum:0});
+  const totalAdRow = deriveDay(grandTotalAd);
+  totalAdRow.hook_rate = grandTotalAd.impressions ? grandTotalAd.hookNum / grandTotalAd.impressions * 100 : 0;
+  totalAdRow.hold_rate = grandTotalAd.hookNum ? grandTotalAd.holdNum / grandTotalAd.hookNum * 100 : 0;
+  rowsObjAd["Total"] = totalAdRow;
+
+  if (adNames.length === 0) {
+    document.getElementById('data-table-creativ').innerHTML = '<tbody><tr><td style="padding:16px;color:var(--text-muted);">Sin datos para este periodo/selección.</td></tr></tbody>';
+  } else {
+    buildCampaignsTable('data-table-creativ', rowsObjAd, adNames, 'Miniatura', {
+      cols: creativCols,
+      nameCellFn: (lab, r) => r && r.thumb ? `<img class="creative-thumb" src="${r.thumb}" alt="">` : '<div class="creative-thumb"></div>',
+    });
+  }
+  document.getElementById('creativ-period-label').textContent = '(' + fmtDate(from) + ' — ' + fmtDate(to) + ')';
+}
+
+buildCreativMultiselect();
+document.getElementById('creativ-date-from').value = DATA.period_from;
+document.getElementById('creativ-date-to').value = LAST_DATE_ISO;
+try { renderCreatividadesTable(); } catch(e) { console.error('Fallo en: Meta creatividades (init)', e); }
 
 /* ============ COMPARATIVA 2025 TAB ============ */
 const comparisonDirections = {
@@ -2749,6 +2927,11 @@ window.renderComparativaTable = renderComparativaTable;
 window.renderComparativaTableTt = renderComparativaTableTt;
 window.toggleCampMultiselect = toggleCampMultiselect;
 window.toggleCampMultiselectTt = toggleCampMultiselectTt;
+window.onCreativDatePresetChange = onCreativDatePresetChange;
+window.onCreativTypeChange = onCreativTypeChange;
+window.toggleCreativMultiselect = toggleCreativMultiselect;
+window.onCreativCampCheckboxChange = onCreativCampCheckboxChange;
+window.renderCreatividadesTable = renderCreatividadesTable;
 
 })();
 </script>
