@@ -1229,10 +1229,11 @@ function sumAggJs(a, b) {
 }
 
 function renderMensualTable() {
-  if (globalCampTypeFilter === 'all') {
-    buildTable('data-table', DATA.rows, DATA.months, 'Mes');
-    return;
-  }
+  const rowsObj = globalCampTypeFilter === 'all' ? DATA.rows : computeFilteredMonthlyRows();
+  buildTable('data-table', rowsObj, DATA.months, 'Mes');
+  drawMensualCharts(rowsObj);
+}
+function computeFilteredMonthlyRows() {
   const byMonth = {};
   DATA.campaignsRaw.forEach(r => {
     if (campaignType[r[1]] !== globalCampTypeFilter) return;
@@ -1244,14 +1245,15 @@ function renderMensualTable() {
   const total = emptyAggJs();
   DATA.months.forEach(m => { const b = byMonth[m] || emptyAggJs(); rowsObj[m] = deriveDay(b); sumAggJs(total, b); });
   rowsObj['Total'] = deriveDay(total);
-  buildTable('data-table', rowsObj, DATA.months, 'Mes');
+  return rowsObj;
 }
 
 function renderSemanalTable() {
-  if (globalCampTypeFilter === 'all') {
-    buildTable('data-table-w', DATA.weekly.rows, DATA.weekly.labels, 'Semana');
-    return;
-  }
+  const rowsObj = globalCampTypeFilter === 'all' ? DATA.weekly.rows : computeFilteredWeeklyRows();
+  buildTable('data-table-w', rowsObj, DATA.weekly.labels, 'Semana');
+  drawSemanalCharts(rowsObj);
+}
+function computeFilteredWeeklyRows() {
   const byWeek = {};
   DATA.campaignsRaw.forEach(r => {
     if (campaignType[r[1]] !== globalCampTypeFilter) return;
@@ -1263,12 +1265,13 @@ function renderSemanalTable() {
   const total = emptyAggJs();
   DATA.weekly.labels.forEach(w => { const b = byWeek[w] || emptyAggJs(); rowsObj[w] = deriveDay(b); sumAggJs(total, b); });
   rowsObj['Total'] = deriveDay(total);
-  buildTable('data-table-w', rowsObj, DATA.weekly.labels, 'Semana');
+  return rowsObj;
 }
 
 function renderDiarioTable() {
   if (globalCampTypeFilter === 'all') {
     buildTable('data-table-d', dailyRows, days_, 'Día');
+    drawDiarioCharts(dailyRows, days_);
     document.getElementById('period-label-d').textContent = last30Raw.length
       ? '(' + fmtDate(last30Raw[0].date) + ' — ' + fmtDate(last30Raw[last30Raw.length-1].date) + ')'
       : '(sin datos diarios)';
@@ -1288,6 +1291,7 @@ function renderDiarioTable() {
   datesLast30.forEach((d,i) => { rowsObj[labels[i]] = deriveDay(byDate[d]); sumAggJs(total, byDate[d]); });
   rowsObj['Total'] = deriveDay(total);
   buildTable('data-table-d', rowsObj, labels, 'Día');
+  drawDiarioCharts(rowsObj, labels);
   document.getElementById('period-label-d').textContent = datesLast30.length
     ? '(' + fmtDate(datesLast30[0]) + ' — ' + fmtDate(datesLast30[datesLast30.length-1]) + ')'
     : '(sin datos diarios)';
@@ -1530,64 +1534,68 @@ function drawMultiLineChart(svgId, legendId, series, labels, fmt, width) {
   }
 }
 
-const months = DATA.months;
-const get = (key) => months.map(m => DATA.rows[m][key]);
-
-drawBarChart('chart-spend', get('spend'), months, fmtEUR);
-drawLineChart('chart-roas', get('roas'), months, fmtNum2);
-drawBarChart('chart-purchases', get('purchases'), months, fmtNum);
-drawLineChart('chart-cpa', get('cpa'), months, fmtEUR2);
-drawBarChart('chart-leads', get('leads'), months, fmtNum);
-drawLineChart('chart-cpl', get('cpl'), months, fmtEUR2);
-drawBarChart('chart-frequency', get('frequency'), months, fmtNum2);
-drawMultiLineChart('chart-ctrcr-leads', 'legend-ctrcr-leads', [
-  {name:'CTR (saliente)', values: get('ctr'), color: 'var(--series-ctr)'},
-  {name:'CR Lead', values: get('cr_lead'), color: 'var(--series-crlead)'},
-], months, fmtPct);
-drawMultiLineChart('chart-ctrcr-purchases', 'legend-ctrcr-purchases', [
-  {name:'CTR (saliente)', values: get('ctr'), color: 'var(--series-ctr)'},
-  {name:'CR Compra', values: get('cr_purchase'), color: 'var(--series-crpurch)'},
-], months, fmtPct);
+function drawMensualCharts(rowsObj) {
+  const monthsL = DATA.months;
+  const get = (key) => monthsL.map(m => rowsObj[m][key]);
+  drawBarChart('chart-spend', get('spend'), monthsL, fmtEUR);
+  drawLineChart('chart-roas', get('roas'), monthsL, fmtNum2);
+  drawBarChart('chart-purchases', get('purchases'), monthsL, fmtNum);
+  drawLineChart('chart-cpa', get('cpa'), monthsL, fmtEUR2);
+  drawBarChart('chart-leads', get('leads'), monthsL, fmtNum);
+  drawLineChart('chart-cpl', get('cpl'), monthsL, fmtEUR2);
+  drawBarChart('chart-frequency', get('frequency'), monthsL, fmtNum2);
+  drawMultiLineChart('chart-ctrcr-leads', 'legend-ctrcr-leads', [
+    {name:'CTR (saliente)', values: get('ctr'), color: 'var(--series-ctr)'},
+    {name:'CR Lead', values: get('cr_lead'), color: 'var(--series-crlead)'},
+  ], monthsL, fmtPct);
+  drawMultiLineChart('chart-ctrcr-purchases', 'legend-ctrcr-purchases', [
+    {name:'CTR (saliente)', values: get('ctr'), color: 'var(--series-ctr)'},
+    {name:'CR Compra', values: get('cr_purchase'), color: 'var(--series-crpurch)'},
+  ], monthsL, fmtPct);
+}
 
 /* ============ WEEKLY CHARTS ============ */
-const weeks_ = DATA.weekly.labels;
-const getW = (key) => weeks_.map(w => DATA.weekly.rows[w][key]);
-
-drawBarChart('chart-spend-w', getW('spend'), weeks_, fmtEUR);
-drawLineChart('chart-roas-w', getW('roas'), weeks_, fmtNum2);
-drawBarChart('chart-purchases-w', getW('purchases'), weeks_, fmtNum);
-drawLineChart('chart-cpa-w', getW('cpa'), weeks_, fmtEUR2);
-drawBarChart('chart-leads-w', getW('leads'), weeks_, fmtNum);
-drawLineChart('chart-cpl-w', getW('cpl'), weeks_, fmtEUR2);
-drawBarChart('chart-frequency-w', getW('frequency'), weeks_, fmtNum2);
-drawMultiLineChart('chart-ctrcr-leads-w', 'legend-ctrcr-leads-w', [
-  {name:'CTR (saliente)', values: getW('ctr'), color: 'var(--series-ctr)'},
-  {name:'CR Lead', values: getW('cr_lead'), color: 'var(--series-crlead)'},
-], weeks_, fmtPct);
-drawMultiLineChart('chart-ctrcr-purchases-w', 'legend-ctrcr-purchases-w', [
-  {name:'CTR (saliente)', values: getW('ctr'), color: 'var(--series-ctr)'},
-  {name:'CR Compra', values: getW('cr_purchase'), color: 'var(--series-crpurch)'},
-], weeks_, fmtPct);
+function drawSemanalCharts(rowsObj) {
+  const weeksL = DATA.weekly.labels;
+  const getW = (key) => weeksL.map(w => rowsObj[w][key]);
+  drawBarChart('chart-spend-w', getW('spend'), weeksL, fmtEUR);
+  drawLineChart('chart-roas-w', getW('roas'), weeksL, fmtNum2);
+  drawBarChart('chart-purchases-w', getW('purchases'), weeksL, fmtNum);
+  drawLineChart('chart-cpa-w', getW('cpa'), weeksL, fmtEUR2);
+  drawBarChart('chart-leads-w', getW('leads'), weeksL, fmtNum);
+  drawLineChart('chart-cpl-w', getW('cpl'), weeksL, fmtEUR2);
+  drawBarChart('chart-frequency-w', getW('frequency'), weeksL, fmtNum2);
+  drawMultiLineChart('chart-ctrcr-leads-w', 'legend-ctrcr-leads-w', [
+    {name:'CTR (saliente)', values: getW('ctr'), color: 'var(--series-ctr)'},
+    {name:'CR Lead', values: getW('cr_lead'), color: 'var(--series-crlead)'},
+  ], weeksL, fmtPct);
+  drawMultiLineChart('chart-ctrcr-purchases-w', 'legend-ctrcr-purchases-w', [
+    {name:'CTR (saliente)', values: getW('ctr'), color: 'var(--series-ctr)'},
+    {name:'CR Compra', values: getW('cr_purchase'), color: 'var(--series-crpurch)'},
+  ], weeksL, fmtPct);
+}
 
 /* ============ DAILY CHARTS (last 30 days) ============ */
-const getD = (key) => days_.map(d => dailyRows[d][key]);
-const dailyWidth = Math.max(520, days_.length * 46);
+function drawDiarioCharts(rowsObj, labelsL) {
+  const getD = (key) => labelsL.map(d => rowsObj[d][key]);
+  const width = Math.max(520, labelsL.length * 46);
+  drawBarChart('chart-spend-d', getD('spend'), labelsL, fmtEUR, width);
+  drawLineChart('chart-roas-d', getD('roas'), labelsL, fmtNum2, width);
+  drawBarChart('chart-purchases-d', getD('purchases'), labelsL, fmtNum, width);
+  drawLineChart('chart-cpa-d', getD('cpa'), labelsL, fmtEUR2, width);
+  drawBarChart('chart-leads-d', getD('leads'), labelsL, fmtNum, width);
+  drawLineChart('chart-cpl-d', getD('cpl'), labelsL, fmtEUR2, width);
+  drawBarChart('chart-frequency-d', getD('frequency'), labelsL, fmtNum2, width);
+  drawMultiLineChart('chart-ctrcr-leads-d', 'legend-ctrcr-leads-d', [
+    {name:'CTR (saliente)', values: getD('ctr'), color: 'var(--series-ctr)'},
+    {name:'CR Lead', values: getD('cr_lead'), color: 'var(--series-crlead)'},
+  ], labelsL, fmtPct, width);
+  drawMultiLineChart('chart-ctrcr-purchases-d', 'legend-ctrcr-purchases-d', [
+    {name:'CTR (saliente)', values: getD('ctr'), color: 'var(--series-ctr)'},
+    {name:'CR Compra', values: getD('cr_purchase'), color: 'var(--series-crpurch)'},
+  ], labelsL, fmtPct, width);
+}
 
-drawBarChart('chart-spend-d', getD('spend'), days_, fmtEUR, dailyWidth);
-drawLineChart('chart-roas-d', getD('roas'), days_, fmtNum2, dailyWidth);
-drawBarChart('chart-purchases-d', getD('purchases'), days_, fmtNum, dailyWidth);
-drawLineChart('chart-cpa-d', getD('cpa'), days_, fmtEUR2, dailyWidth);
-drawBarChart('chart-leads-d', getD('leads'), days_, fmtNum, dailyWidth);
-drawLineChart('chart-cpl-d', getD('cpl'), days_, fmtEUR2, dailyWidth);
-drawBarChart('chart-frequency-d', getD('frequency'), days_, fmtNum2, dailyWidth);
-drawMultiLineChart('chart-ctrcr-leads-d', 'legend-ctrcr-leads-d', [
-  {name:'CTR (saliente)', values: getD('ctr'), color: 'var(--series-ctr)'},
-  {name:'CR Lead', values: getD('cr_lead'), color: 'var(--series-crlead)'},
-], days_, fmtPct, dailyWidth);
-drawMultiLineChart('chart-ctrcr-purchases-d', 'legend-ctrcr-purchases-d', [
-  {name:'CTR (saliente)', values: getD('ctr'), color: 'var(--series-ctr)'},
-  {name:'CR Compra', values: getD('cr_purchase'), color: 'var(--series-crpurch)'},
-], days_, fmtPct, dailyWidth);
 
 /* ============ CAMPAIGNS & CREATIVES TAB ============ */
 const LAST_DATE_ISO = DATA.campaignsRaw.length
