@@ -1,0 +1,2707 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Food For Joe — Resultados Meta Ads</title>
+<style>
+  .viz-root {
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --page-plane:     #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:       #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    --series-1:       #2a78d6; /* blue - inversion/spend/frequency bars */
+    --series-2:       #eb6834; /* orange - roas/rate lines (ctr) */
+    --series-3:       #1baf7a; /* aqua - cr lead */
+    --series-4:       #eda100; /* yellow - cr compra (unused, kept for reference) */
+    --series-ctr:     #2a78d6; /* blue - CTR line in CTR/CR charts */
+    --series-crlead:  #1baf7a; /* aqua - CR Lead line */
+    --series-crpurch: #4a3aa7; /* violet - CR Compra line */
+    --brand-green:    #1f3d2c;
+    --delta-good:     #006300;
+    --delta-bad:      #d03b3b;
+  }
+  * { box-sizing: border-box; }
+  html,body {
+    margin:0; padding:0;
+    background: var(--page-plane);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 32px 24px 64px; }
+  .header {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom: 28px; gap: 16px; flex-wrap: wrap;
+  }
+  .header-left { display:flex; align-items:center; gap:14px; }
+  .platform-select-wrap { display:flex; flex-direction:column; gap:2px; margin-right:4px; }
+  .platform-label { font-size:10.5px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.04em; }
+  #platform-select {
+    font-size:13px; font-weight:600; padding:6px 10px; border-radius:8px;
+    border:1px solid var(--border-color, #dcdfe4); background: var(--surface-1, #fff);
+    color: var(--text-primary); cursor:pointer;
+  }
+  .logo-badge {
+    width:52px; height:52px; border-radius:12px; background: var(--brand-green);
+    color:#fff; display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:11px; text-align:center; line-height:1.15;
+    letter-spacing:0.02em; overflow:hidden;
+  }
+  .logo-badge img { width:100%; height:100%; object-fit:contain; display:block; }
+  .title-block h1 { margin:0; font-size:22px; font-weight:700; }
+  .title-block .sub { margin:2px 0 0; font-size:13px; color: var(--text-secondary); }
+  .meta-pill {
+    font-size:12px; color: var(--text-secondary); background: var(--surface-1);
+    border:1px solid var(--border); border-radius:999px; padding:6px 14px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .meta-pill .dot { width:7px; height:7px; border-radius:50%; background:#0ca30c; }
+
+  .stat-period-label { font-size:12.5px; color: var(--text-secondary); margin: 0 0 10px; }
+  .stat-row {
+    display:grid; grid-template-columns: repeat(6, 1fr); gap:14px; margin-bottom: 28px;
+  }
+  .stat-tile {
+    background: var(--surface-1); border:1px solid var(--border); border-radius:14px;
+    padding:16px 18px;
+  }
+  .stat-tile .label { font-size:12.5px; color: var(--text-secondary); margin-bottom:6px; }
+  .stat-tile .value { font-size:24px; font-weight:600; letter-spacing:-0.01em; }
+  .stat-delta { display:block; font-size:12.5px; font-weight:600; margin-top:4px; }
+
+  .panel {
+    background: var(--surface-1); border:1px solid var(--border); border-radius:16px;
+    padding:22px 22px 10px; margin-bottom: 22px;
+  }
+  .panel h2 { font-size:15px; margin:0 0 14px; font-weight:600; }
+  .panel h2 .period { font-weight:400; color: var(--text-secondary); font-size:12.5px; }
+
+  table { width:100%; border-collapse: collapse; font-size:12px; }
+  thead th {
+    text-align:right; font-weight:600; color: var(--text-secondary);
+    padding:8px 4px; border-bottom:1px solid var(--gridline); white-space:nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  thead th:first-child, td.month-cell { text-align:left; }
+  tbody td {
+    text-align:right; padding:8px 4px; border-bottom:1px solid var(--gridline);
+    font-variant-numeric: tabular-nums; white-space:nowrap;
+  }
+  tbody tr:last-child td { border-bottom:none; }
+  tr.total-row td { font-weight:700; border-top:1.5px solid var(--baseline); background: rgba(11,11,11,0.02); }
+  .table-scroll { overflow-x:auto; }
+
+  .chart-grid {
+    display:grid; grid-template-columns: 1fr 1fr; gap:22px; margin-bottom: 22px;
+  }
+  .chart-grid-single {
+    grid-template-columns: 1fr;
+  }
+  .chart-grid-single svg.chart { max-width:600px; }
+  .chart-box { min-width:0; }
+  .chart-box .chart-title { font-size:12.5px; color: var(--text-secondary); margin-bottom:8px; font-weight:600; }
+  svg.chart { width:100%; height:210px; overflow: visible; font-family: inherit; }
+  .bar { fill: var(--series-1); }
+  .bar-value { font-size:10.5px; fill: var(--text-secondary); font-weight:600; }
+  .axis-label { font-size:10.5px; fill: var(--text-muted); }
+  .gridline { stroke: var(--gridline); stroke-width:1; }
+  .line-path { fill:none; stroke: var(--series-2); stroke-width:2; stroke-linejoin:round; stroke-linecap:round; }
+  .line-dot { fill: var(--series-2); stroke: var(--surface-1); stroke-width:2; }
+  .line-value { font-size:10.5px; fill: var(--text-secondary); font-weight:600; }
+  .hover-target { fill: transparent; cursor: pointer; }
+  .hover-guide { stroke: var(--baseline); stroke-width:1; stroke-dasharray:2,2; opacity:0; pointer-events:none; }
+
+  .tooltip {
+    position:absolute; pointer-events:none; background: var(--text-primary); color:#fff;
+    font-size:12px; padding:6px 10px; border-radius:8px; white-space:nowrap;
+    opacity:0; transition: opacity 0.1s; transform: translate(-50%, -110%); z-index:10;
+  }
+  .footer-note { font-size:11.5px; color: var(--text-muted); margin-top: 6px; padding: 0 4px; }
+  .insights-list { margin:0; padding-left:0; list-style:none; display:flex; flex-direction:column; gap:12px; }
+  .insights-list li { font-size:13.5px; line-height:1.55; color:var(--text-primary); padding-left:18px; position:relative; }
+  .insights-list li::before { content:''; position:absolute; left:2px; top:0.5em; width:6px; height:6px; border-radius:50%; background:var(--series-1); }
+  .insights-list li strong { font-weight:700; }
+  .insights-empty { font-size:13px; color:var(--text-muted); }
+  .legend { display:flex; gap:16px; margin-bottom:8px; flex-wrap:wrap; }
+  .legend-item { display:flex; align-items:center; gap:6px; font-size:12px; color: var(--text-secondary); }
+  .legend-swatch { width:10px; height:10px; border-radius:3px; display:inline-block; }
+  .chart-scroll { overflow-x:auto; }
+  .section-heading { font-size:19px; font-weight:700; margin: 40px 0 16px; padding-top: 8px; border-top: 1px solid var(--gridline); }
+  .section-heading:first-of-type { border-top:none; }
+
+  .tab-bar { display:flex; gap:6px; margin-bottom:22px; border-bottom:1px solid var(--gridline); }
+  .tab-btn {
+    font-family:inherit; font-size:14px; font-weight:600; color: var(--text-secondary);
+    background:none; border:none; cursor:pointer; padding:10px 4px; margin-right:22px;
+    border-bottom:2px solid transparent; margin-bottom:-1px;
+  }
+  .tab-btn.active { color: var(--text-primary); border-bottom-color: var(--series-1); }
+  .tab-btn:hover { color: var(--text-primary); }
+
+  .filter-bar { display:flex; gap:24px; flex-wrap:wrap; align-items:flex-end; }
+  .filter-field { display:flex; flex-direction:column; gap:5px; }
+  .filter-field label { font-size:12px; font-weight:600; color: var(--text-secondary); }
+  .filter-field select, .filter-field input[type=date] {
+    font-family:inherit; font-size:13px; color: var(--text-primary);
+    background: var(--surface-1); border:1px solid var(--border); border-radius:8px;
+    padding:7px 10px; min-width:150px;
+  }
+  .multiselect { position:relative; }
+  .multiselect-btn {
+    font-family:inherit; font-size:13px; color: var(--text-primary);
+    background: var(--surface-1); border:1px solid var(--border); border-radius:8px;
+    padding:7px 10px; min-width:200px; text-align:left; cursor:pointer;
+  }
+  .multiselect-btn:hover { border-color: var(--baseline); }
+  .multiselect-panel {
+    position:absolute; top:calc(100% + 4px); left:0; z-index:20; min-width:280px; max-height:320px;
+    overflow-y:auto; background: var(--surface-1); border:1px solid var(--border); border-radius:10px;
+    box-shadow: 0 8px 24px rgba(11,11,11,0.12); padding:8px;
+  }
+  .multiselect-actions { display:flex; gap:10px; padding:4px 6px 8px; border-bottom:1px solid var(--gridline); margin-bottom:6px; }
+  .multiselect-actions a { font-size:12px; color: var(--series-1); cursor:pointer; text-decoration:none; }
+  .multiselect-option { display:flex; align-items:center; gap:8px; padding:6px; border-radius:6px; font-size:13px; cursor:pointer; }
+  .multiselect-option:hover { background: var(--page-plane); }
+  .multiselect-option input { margin:0; }
+
+  .type-badge {
+    display:inline-block; font-size:10.5px; font-weight:600; padding:2px 7px; border-radius:999px;
+    background: var(--page-plane); color: var(--text-secondary); margin-left:6px;
+  }
+
+  .status-pill {
+    display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600;
+    padding:3px 8px; border-radius:999px; white-space:nowrap;
+  }
+  .status-pill.active { color:#0ca30c; background: rgba(12,163,12,0.1); }
+  .status-pill.paused { color: var(--text-muted); background: rgba(137,135,129,0.12); }
+  .status-pill .dot { width:6px; height:6px; border-radius:50%; background:currentColor; }
+
+  .creative-cell { display:flex; align-items:center; gap:10px; }
+  .creative-thumb {
+    width:36px; height:36px; border-radius:8px; background: var(--gridline);
+    object-fit: cover; flex-shrink:0; border:1px solid var(--border);
+  }
+  .dest-link { font-size:11px; color: var(--series-1); text-decoration:none; }
+  .dest-link:hover { text-decoration:underline; }
+
+  table.sortable thead th { cursor:pointer; user-select:none; }
+  table.sortable thead th:hover { color: var(--text-primary); }
+  table.sortable thead th .sort-arrow { font-size:9px; margin-left:3px; opacity:0.45; }
+  table.sortable thead th.sorted .sort-arrow { opacity:1; }
+  @media (max-width: 900px) {
+    .stat-row { grid-template-columns: repeat(3,1fr); }
+  }
+  @media (max-width: 720px) {
+    .stat-row { grid-template-columns: repeat(2,1fr); }
+    .chart-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="viz-root wrap" id="app">
+
+  <div class="header">
+    <div class="header-left">
+      <div class="platform-select-wrap">
+        <label for="platform-select" class="platform-label">Plataforma</label>
+        <select id="platform-select" onchange="switchPlatform(this.value)">
+          <option value="meta">Meta Ads</option>
+          <option value="tiktok">TikTok Ads</option>
+        </select>
+      </div>
+      <div class="logo-badge"><img src="https://store.foodforjoe.es/cdn/shop/files/logo-greenbackg_5372ec7b-87b3-4a8d-9356-a2948af50242.png?v=1657278765" alt="Food For Joe"></div>
+      <div class="title-block">
+        <h1 id="header-title">Resultados Meta Ads — Global</h1>
+        <p class="sub" id="header-sub">Cuenta: Food for Joe · Datos vía Windsor.ai</p>
+      </div>
+    </div>
+    <div class="meta-pill"><span class="dot"></span><span id="update-label">Actualizado hasta el —</span></div>
+  </div>
+
+  <div id="platform-meta">
+  <p class="stat-period-label" id="stat-period-label"></p>
+  <div class="stat-row" id="stat-row"></div>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="mensual" onclick="switchTab('mensual')">Mensual</button>
+    <button class="tab-btn" data-tab="semanal" onclick="switchTab('semanal')">Semanal</button>
+    <button class="tab-btn" data-tab="diario" onclick="switchTab('diario')">Diario</button>
+    <button class="tab-btn" data-tab="campanas" onclick="switchTab('campanas')">Campañas</button>
+    <button class="tab-btn" data-tab="landings" onclick="switchTab('landings')">Landings</button>
+    <button class="tab-btn" data-tab="comparativa" onclick="switchTab('comparativa')">Comparativa 2025</button>
+    <button class="tab-btn" data-tab="insights" onclick="switchTab('insights')">Insights</button>
+  </div>
+
+  <div id="tab-mensual" class="tab-panel">
+
+  <div class="panel">
+    <div class="filter-bar">
+      <div class="filter-field">
+        <label for="mensual-type-filter">Tipo de campaña</label>
+        <select id="mensual-type-filter" onchange="onGlobalTypeFilterChange(this.value)">
+          <option value="all" selected>Todos</option>
+          <option value="Ecommerce">Ecommerce</option>
+          <option value="Suscripción">Suscripción</option>
+          <option value="Leads">Leads</option>
+          <option value="Otros">Otros</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Desglose mensual <span class="period" id="period-label"></span></h2>
+    <div class="table-scroll">
+      <table id="data-table"></table>
+    </div>
+    <p class="footer-note">CPC y CTR calculados sobre clics salientes (fuera de Meta). CR Lead y CR Compra = Leads/Compras sobre clics salientes. Frecuencia y ROAS del total se calculan sobre los agregados del periodo, no como media simple de los meses.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Inversión y ROAS</h2>
+    <div class="chart-grid">
+      <div class="chart-box">
+        <div class="chart-title">Inversión (€)</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-spend"></svg></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">ROAS</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-roas"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Compras y CPA</h2>
+    <div class="chart-grid">
+      <div class="chart-box">
+        <div class="chart-title">Compras</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-purchases"></svg></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">CPA (€)</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-cpa"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Leads y CPL</h2>
+    <div class="chart-grid">
+      <div class="chart-box">
+        <div class="chart-title">Leads</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-leads"></svg></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">CPL (€)</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-cpl"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Frecuencia</h2>
+    <div class="chart-grid chart-grid-single">
+      <div class="chart-box">
+        <div class="chart-title">Frecuencia</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-frequency"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>CTR y CR</h2>
+    <div class="chart-grid">
+      <div class="chart-box">
+        <div class="chart-title">Leads: CTR y CR Lead (%)</div>
+        <div class="legend" id="legend-ctrcr-leads"></div>
+        <div class="chart-scroll"><svg class="chart" id="chart-ctrcr-leads"></svg></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">Compras: CTR y CR Compra (%)</div>
+        <div class="legend" id="legend-ctrcr-purchases"></div>
+        <div class="chart-scroll"><svg class="chart" id="chart-ctrcr-purchases"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /tab-mensual -->
+
+  <div id="tab-semanal" class="tab-panel" style="display:none;">
+
+  <div class="panel">
+    <div class="filter-bar">
+      <div class="filter-field">
+        <label for="semanal-type-filter">Tipo de campaña</label>
+        <select id="semanal-type-filter" onchange="onGlobalTypeFilterChange(this.value)">
+          <option value="all" selected>Todos</option>
+          <option value="Ecommerce">Ecommerce</option>
+          <option value="Suscripción">Suscripción</option>
+          <option value="Leads">Leads</option>
+          <option value="Otros">Otros</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Desglose semanal <span class="period" id="period-label-w"></span></h2>
+    <div class="table-scroll">
+      <table id="data-table-w"></table>
+    </div>
+    <p class="footer-note">Semanas de lunes a domingo (la primera y la última pueden ser parciales). CPC y CTR calculados sobre clics salientes. CR Lead y CR Compra = Leads/Compras sobre clics salientes.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Inversión y ROAS (semanal)</h2>
+    <div class="chart-grid">
+      <div class="chart-box">
+        <div class="chart-title">Inversión (€)</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-spend-w"></svg></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">ROAS</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-roas-w"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Compras y CPA (semanal)</h2>
+    <div class="chart-grid">
+      <div class="chart-box">
+        <div class="chart-title">Compras</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-purchases-w"></svg></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">CPA (€)</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-cpa-w"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Leads y CPL (semanal)</h2>
+    <div class="chart-grid">
+      <div class="chart-box">
+        <div class="chart-title">Leads</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-leads-w"></svg></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">CPL (€)</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-cpl-w"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Frecuencia (semanal)</h2>
+    <div class="chart-grid chart-grid-single">
+      <div class="chart-box">
+        <div class="chart-title">Frecuencia</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-frequency-w"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>CTR y CR (semanal)</h2>
+    <div class="chart-grid">
+      <div class="chart-box">
+        <div class="chart-title">Leads: CTR y CR Lead (%)</div>
+        <div class="legend" id="legend-ctrcr-leads-w"></div>
+        <div class="chart-scroll"><svg class="chart" id="chart-ctrcr-leads-w"></svg></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">Compras: CTR y CR Compra (%)</div>
+        <div class="legend" id="legend-ctrcr-purchases-w"></div>
+        <div class="chart-scroll"><svg class="chart" id="chart-ctrcr-purchases-w"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /tab-semanal -->
+
+  <div id="tab-diario" class="tab-panel" style="display:none;">
+
+  <div class="panel">
+    <div class="filter-bar">
+      <div class="filter-field">
+        <label for="diario-type-filter">Tipo de campaña</label>
+        <select id="diario-type-filter" onchange="onGlobalTypeFilterChange(this.value)">
+          <option value="all" selected>Todos</option>
+          <option value="Ecommerce">Ecommerce</option>
+          <option value="Suscripción">Suscripción</option>
+          <option value="Leads">Leads</option>
+          <option value="Otros">Otros</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Desglose diario <span class="period" id="period-label-d"></span></h2>
+    <div class="table-scroll">
+      <table id="data-table-d"></table>
+    </div>
+    <p class="footer-note">CPC y CTR calculados sobre clics salientes (fuera de Meta). CR Lead y CR Compra = Leads/Compras sobre clics salientes.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Inversión y ROAS (diario)</h2>
+    <div class="chart-grid">
+      <div class="chart-box">
+        <div class="chart-title">Inversión (€)</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-spend-d"></svg></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">ROAS</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-roas-d"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Compras y CPA (diario)</h2>
+    <div class="chart-grid">
+      <div class="chart-box">
+        <div class="chart-title">Compras</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-purchases-d"></svg></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">CPA (€)</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-cpa-d"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Leads y CPL (diario)</h2>
+    <div class="chart-grid">
+      <div class="chart-box">
+        <div class="chart-title">Leads</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-leads-d"></svg></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">CPL (€)</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-cpl-d"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Frecuencia (diario)</h2>
+    <div class="chart-grid chart-grid-single">
+      <div class="chart-box">
+        <div class="chart-title">Frecuencia</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-frequency-d"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>CTR y CR (diario)</h2>
+    <div class="chart-grid">
+      <div class="chart-box">
+        <div class="chart-title">Leads: CTR y CR Lead (%)</div>
+        <div class="legend" id="legend-ctrcr-leads-d"></div>
+        <div class="chart-scroll"><svg class="chart" id="chart-ctrcr-leads-d"></svg></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">Compras: CTR y CR Compra (%)</div>
+        <div class="legend" id="legend-ctrcr-purchases-d"></div>
+        <div class="chart-scroll"><svg class="chart" id="chart-ctrcr-purchases-d"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /tab-diario -->
+
+  <div id="tab-campanas" class="tab-panel" style="display:none;">
+
+  <div class="panel">
+    <div class="filter-bar">
+      <div class="filter-field">
+        <label for="camp-date-preset">Periodo</label>
+        <select id="camp-date-preset" onchange="onCampDatePresetChange()">
+          <option value="today">Hoy</option>
+          <option value="yesterday">Ayer</option>
+          <option value="last7">Últimos 7 días</option>
+          <option value="last30">Últimos 30 días</option>
+          <option value="thismonth">Este mes</option>
+          <option value="lastmonth">Mes anterior</option>
+          <option value="ytd" selected>Todo 2026</option>
+          <option value="custom">Personalizado…</option>
+        </select>
+      </div>
+      <div class="filter-field" id="camp-custom-range" style="display:none;">
+        <label for="camp-date-from">Desde</label>
+        <input type="date" id="camp-date-from" onchange="renderCampaignsTable()">
+        <label for="camp-date-to">Hasta</label>
+        <input type="date" id="camp-date-to" onchange="renderCampaignsTable()">
+      </div>
+      <div class="filter-field">
+        <label for="camp-type">Tipo de campaña</label>
+        <select id="camp-type" onchange="onCampTypeChange()">
+          <option value="all" selected>Todos</option>
+          <option value="Ecommerce">Ecommerce</option>
+          <option value="Suscripción">Suscripción</option>
+          <option value="Leads">Leads</option>
+          <option value="Otros">Otros</option>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label>Campañas</label>
+        <div class="multiselect" id="camp-multiselect">
+          <button type="button" class="multiselect-btn" id="camp-multiselect-btn" onclick="toggleCampMultiselect()">Todas las campañas</button>
+          <div class="multiselect-panel" id="camp-multiselect-panel" style="display:none;"></div>
+        </div>
+      </div>
+      <div class="filter-field">
+        <label for="camp-status-filter">Estado</label>
+        <select id="camp-status-filter" onchange="renderCampaignsTable()">
+          <option value="all" selected>Todos</option>
+          <option value="ACTIVE">Activo</option>
+          <option value="PAUSED">Pausado</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Desglose por campaña <span class="period" id="camp-period-label"></span></h2>
+    <div class="table-scroll">
+      <table id="data-table-camp"></table>
+    </div>
+    <p class="footer-note">CPC y CTR calculados sobre clics salientes (fuera de Meta). CR Lead y CR Compra = Leads/Compras sobre clics salientes.<br>
+    Tipo de campaña se asigna por el nombre: <strong>Ecommerce</strong> = contiene "ecom"; <strong>Suscripción</strong> = contiene "suscri" y "PE" (purchase event); <strong>Leads</strong> = contiene "suscri" y "LE" (lead event); el resto queda en <strong>Otros</strong>. Haz clic en cualquier columna para ordenar.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Desglose por conjunto de anuncios (adset) <span class="period" id="camp-period-label-adset"></span></h2>
+    <div class="table-scroll">
+      <table id="data-table-camp-adset"></table>
+    </div>
+    <p class="footer-note">Misma tabla y mismos filtros de arriba, agrupada por adset en vez de por campaña.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Desglose por anuncio (creatividad) <span class="period" id="camp-period-label-ad"></span></h2>
+    <div class="table-scroll">
+      <table id="data-table-camp-ad"></table>
+    </div>
+    <p class="footer-note">Hook Rate = reproducciones de vídeo / Impresiones. Hold Rate = ThruPlays / reproducciones. Solo aplica a anuncios en vídeo (los estáticos muestran 0%).</p>
+  </div>
+
+
+
+  </div><!-- /tab-campanas (cierre que faltaba) -->
+
+  <div id="tab-landings" class="tab-panel" style="display:none;">
+
+  <div class="panel">
+    <div class="filter-bar">
+      <div class="filter-field">
+        <label for="land-date-preset">Periodo</label>
+        <select id="land-date-preset" onchange="onLandDatePresetChange()">
+          <option value="today">Hoy</option>
+          <option value="yesterday">Ayer</option>
+          <option value="last7">Últimos 7 días</option>
+          <option value="last30">Últimos 30 días</option>
+          <option value="thismonth">Este mes</option>
+          <option value="lastmonth">Mes anterior</option>
+          <option value="ytd" selected>Todo 2026</option>
+          <option value="custom">Personalizado…</option>
+        </select>
+      </div>
+      <div class="filter-field" id="land-custom-range" style="display:none;">
+        <label for="land-date-from">Desde</label>
+        <input type="date" id="land-date-from" onchange="renderLandingsTable()">
+        <label for="land-date-to">Hasta</label>
+        <input type="date" id="land-date-to" onchange="renderLandingsTable()">
+      </div>
+      <div class="filter-field">
+        <label for="land-type">Tipo de campaña</label>
+        <select id="land-type" onchange="onLandTypeChange()">
+          <option value="all" selected>Todos</option>
+          <option value="Ecommerce">Ecommerce</option>
+          <option value="Suscripción">Suscripción</option>
+          <option value="Leads">Leads</option>
+          <option value="Otros">Otros</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Desglose por destino de los anuncios <span class="period" id="land-period-label"></span></h2>
+    <div class="table-scroll">
+      <table id="data-table-land"></table>
+    </div>
+    <p class="footer-note"><strong>Home</strong> = la URL de destino es el dominio raíz www.foodforjoe.es (sin /quiz). <strong>Quiz</strong> = la URL contiene foodforjoe.es/quiz. <strong>Landings</strong> = la URL es una landing go.foodforjoe.* (se agregan todas las landings/"pains" juntas, sin desglosar por pain individual). <strong>Otros</strong> = cualquier otro destino (tienda store.foodforjoe.es, sorteos, o anuncios sin URL de destino registrada). Mismas columnas y fórmulas SUM/SUM que la tabla Mensual.</p>
+  </div>
+
+  </div><!-- /tab-landings -->
+
+  <div id="tab-comparativa" class="tab-panel" style="display:none;">
+
+  <div class="panel">
+    <div class="filter-bar">
+      <div class="filter-field">
+        <label for="cmp-date-preset">Periodo (2026)</label>
+        <select id="cmp-date-preset" onchange="onCmpDatePresetChange()">
+          <option value="today">Hoy</option>
+          <option value="yesterday">Ayer</option>
+          <option value="last7">Últimos 7 días</option>
+          <option value="last30">Últimos 30 días</option>
+          <option value="thismonth">Este mes</option>
+          <option value="lastmonth">Mes anterior</option>
+          <option value="ytd" selected>Todo 2026 (1 ene — ayer)</option>
+          <option value="custom">Personalizado…</option>
+        </select>
+      </div>
+      <div class="filter-field" id="cmp-custom-range" style="display:none;">
+        <label for="cmp-date-from">Desde</label>
+        <input type="date" id="cmp-date-from" onchange="renderComparativaTable()">
+        <label for="cmp-date-to">Hasta</label>
+        <input type="date" id="cmp-date-to" onchange="renderComparativaTable()">
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Comparativa vs. mismo periodo de 2025 <span class="period" id="cmp-period-label"></span></h2>
+    <div class="table-scroll">
+      <table id="data-table-cmp"></table>
+    </div>
+    <p class="footer-note">El periodo de 2025 es exactamente el mismo rango de fechas (mismo día/mes) desplazado un año atrás. Variación = (2026 − 2025) / 2025. CPC y CTR calculados sobre clics salientes (fuera de Meta). CR Lead y CR Compra = Leads/Compras sobre clics salientes.</p>
+  </div>
+
+  </div><!-- /tab-comparativa -->
+
+  <div id="tab-insights" class="tab-panel" style="display:none;">
+
+  <div class="panel">
+    <h2>Cuenta — resultados globales <span class="period" id="ins-period-label"></span></h2>
+    <ul class="insights-list" id="ins-account"></ul>
+  </div>
+
+  <h2 class="section-heading">Por tipología de campaña</h2>
+
+  <div class="panel">
+    <h2>Ecommerce <span class="period" id="ins-period-label-ecom"></span></h2>
+    <ul class="insights-list" id="ins-ecommerce"></ul>
+  </div>
+
+  <div class="panel">
+    <h2>Suscripción <span class="period" id="ins-period-label-susc"></span></h2>
+    <ul class="insights-list" id="ins-suscripcion"></ul>
+  </div>
+
+  <div class="panel">
+    <h2>Leads <span class="period" id="ins-period-label-leads"></span></h2>
+    <ul class="insights-list" id="ins-leads"></ul>
+  </div>
+
+  </div><!-- /tab-insights -->
+
+  </div><!-- /platform-meta -->
+
+  <div id="platform-tt" style="display:none;">
+    <p class="stat-period-label" id="stat-period-label-tt"></p>
+  <div class="stat-row" id="stat-row-tt"></div>
+
+  <div class="tab-bar" id="tab-bar-tt">
+    <button class="tab-btn active" data-tab="mensual" onclick="switchTabTt('mensual')">Mensual</button>
+    <button class="tab-btn" data-tab="semanal" onclick="switchTabTt('semanal')">Semanal</button>
+    <button class="tab-btn" data-tab="diario" onclick="switchTabTt('diario')">Diario</button>
+    <button class="tab-btn" data-tab="campanas" onclick="switchTabTt('campanas')">Campañas</button>
+    <button class="tab-btn" data-tab="comparativa" onclick="switchTabTt('comparativa')">Comparativa 2025</button>
+    <button class="tab-btn" data-tab="insights" onclick="switchTabTt('insights')">Insights</button>
+  </div>
+
+  <div id="tab-mensual-tt" class="tab-panel">
+
+  <div class="panel">
+    <div class="filter-bar">
+      <div class="filter-field">
+        <label for="mensual-type-filter-tt">Tipo de campaña</label>
+        <select id="mensual-type-filter-tt" onchange="onGlobalTypeFilterChangeTt(this.value)">
+          <option value="all" selected>Todos</option>
+          <option value="Ecommerce">Ecommerce</option>
+          <option value="Suscripción">Suscripción</option>
+          <option value="Leads">Leads</option>
+          <option value="Otros">Otros</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Desglose mensual <span class="period" id="period-label-tt"></span></h2>
+    <div class="table-scroll">
+      <table id="data-table-tt"></table>
+    </div>
+    <p class="footer-note">CPC y CTR calculados sobre clics. CR Lead y CR Compra = Leads/Compras sobre clics. Frecuencia y ROAS del total se calculan sobre los agregados del periodo, no como media simple de los meses.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Inversión y ROAS</h2>
+    <div class="chart-grid">
+      <div class="chart-box">
+        <div class="chart-title">Inversión (€)</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-spend-tt"></svg></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">ROAS</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-roas-tt"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Compras y CPA</h2>
+    <div class="chart-grid">
+      <div class="chart-box">
+        <div class="chart-title">Compras</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-purchases-tt"></svg></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">CPA (€)</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-cpa-tt"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Leads y CPL</h2>
+    <div class="chart-grid">
+      <div class="chart-box">
+        <div class="chart-title">Leads</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-leads-tt"></svg></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">CPL (€)</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-cpl-tt"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Frecuencia</h2>
+    <div class="chart-grid chart-grid-single">
+      <div class="chart-box">
+        <div class="chart-title">Frecuencia</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-frequency-tt"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>CTR y CR</h2>
+    <div class="chart-grid">
+      <div class="chart-box">
+        <div class="chart-title">Leads: CTR y CR Lead (%)</div>
+        <div class="legend" id="legend-ctrcr-leads-tt"></div>
+        <div class="chart-scroll"><svg class="chart" id="chart-ctrcr-leads-tt"></svg></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">Compras: CTR y CR Compra (%)</div>
+        <div class="legend" id="legend-ctrcr-purchases-tt"></div>
+        <div class="chart-scroll"><svg class="chart" id="chart-ctrcr-purchases-tt"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /tab-mensual -->
+
+
+  <div id="tab-semanal-tt" class="tab-panel" style="display:none;">
+
+  <div class="panel">
+    <div class="filter-bar">
+      <div class="filter-field">
+        <label for="semanal-type-filter-tt">Tipo de campaña</label>
+        <select id="semanal-type-filter-tt" onchange="onGlobalTypeFilterChangeTt(this.value)">
+          <option value="all" selected>Todos</option>
+          <option value="Ecommerce">Ecommerce</option>
+          <option value="Suscripción">Suscripción</option>
+          <option value="Leads">Leads</option>
+          <option value="Otros">Otros</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Desglose semanal <span class="period" id="period-label-w-tt"></span></h2>
+    <div class="table-scroll">
+      <table id="data-table-w-tt"></table>
+    </div>
+    <p class="footer-note">Semanas de lunes a domingo (la primera y la última pueden ser parciales). CPC y CTR calculados sobre clics. CR Lead y CR Compra = Leads/Compras sobre clics.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Inversión y ROAS (semanal)</h2>
+    <div class="chart-grid">
+      <div class="chart-box">
+        <div class="chart-title">Inversión (€)</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-spend-w-tt"></svg></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">ROAS</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-roas-w-tt"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Compras y CPA (semanal)</h2>
+    <div class="chart-grid">
+      <div class="chart-box">
+        <div class="chart-title">Compras</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-purchases-w-tt"></svg></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">CPA (€)</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-cpa-w-tt"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Leads y CPL (semanal)</h2>
+    <div class="chart-grid">
+      <div class="chart-box">
+        <div class="chart-title">Leads</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-leads-w-tt"></svg></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">CPL (€)</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-cpl-w-tt"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Frecuencia (semanal)</h2>
+    <div class="chart-grid chart-grid-single">
+      <div class="chart-box">
+        <div class="chart-title">Frecuencia</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-frequency-w-tt"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>CTR y CR (semanal)</h2>
+    <div class="chart-grid">
+      <div class="chart-box">
+        <div class="chart-title">Leads: CTR y CR Lead (%)</div>
+        <div class="legend" id="legend-ctrcr-leads-w-tt"></div>
+        <div class="chart-scroll"><svg class="chart" id="chart-ctrcr-leads-w-tt"></svg></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">Compras: CTR y CR Compra (%)</div>
+        <div class="legend" id="legend-ctrcr-purchases-w-tt"></div>
+        <div class="chart-scroll"><svg class="chart" id="chart-ctrcr-purchases-w-tt"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /tab-semanal -->
+
+
+  <div id="tab-diario-tt" class="tab-panel" style="display:none;">
+
+  <div class="panel">
+    <div class="filter-bar">
+      <div class="filter-field">
+        <label for="diario-type-filter-tt">Tipo de campaña</label>
+        <select id="diario-type-filter-tt" onchange="onGlobalTypeFilterChangeTt(this.value)">
+          <option value="all" selected>Todos</option>
+          <option value="Ecommerce">Ecommerce</option>
+          <option value="Suscripción">Suscripción</option>
+          <option value="Leads">Leads</option>
+          <option value="Otros">Otros</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Desglose diario <span class="period" id="period-label-d-tt"></span></h2>
+    <div class="table-scroll">
+      <table id="data-table-d-tt"></table>
+    </div>
+    <p class="footer-note">CPC y CTR calculados sobre clics. CR Lead y CR Compra = Leads/Compras sobre clics.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Inversión y ROAS (diario)</h2>
+    <div class="chart-grid">
+      <div class="chart-box">
+        <div class="chart-title">Inversión (€)</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-spend-d-tt"></svg></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">ROAS</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-roas-d-tt"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Compras y CPA (diario)</h2>
+    <div class="chart-grid">
+      <div class="chart-box">
+        <div class="chart-title">Compras</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-purchases-d-tt"></svg></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">CPA (€)</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-cpa-d-tt"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Leads y CPL (diario)</h2>
+    <div class="chart-grid">
+      <div class="chart-box">
+        <div class="chart-title">Leads</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-leads-d-tt"></svg></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">CPL (€)</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-cpl-d-tt"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Frecuencia (diario)</h2>
+    <div class="chart-grid chart-grid-single">
+      <div class="chart-box">
+        <div class="chart-title">Frecuencia</div>
+        <div class="chart-scroll"><svg class="chart" id="chart-frequency-d-tt"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>CTR y CR (diario)</h2>
+    <div class="chart-grid">
+      <div class="chart-box">
+        <div class="chart-title">Leads: CTR y CR Lead (%)</div>
+        <div class="legend" id="legend-ctrcr-leads-d-tt"></div>
+        <div class="chart-scroll"><svg class="chart" id="chart-ctrcr-leads-d-tt"></svg></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">Compras: CTR y CR Compra (%)</div>
+        <div class="legend" id="legend-ctrcr-purchases-d-tt"></div>
+        <div class="chart-scroll"><svg class="chart" id="chart-ctrcr-purchases-d-tt"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /tab-diario -->
+
+
+  <div id="tab-campanas-tt" class="tab-panel" style="display:none;">
+
+  <div class="panel">
+    <div class="filter-bar">
+      <div class="filter-field">
+        <label for="camp-date-preset-tt">Periodo</label>
+        <select id="camp-date-preset-tt" onchange="onCampDatePresetChangeTt()">
+          <option value="today">Hoy</option>
+          <option value="yesterday">Ayer</option>
+          <option value="last7">Últimos 7 días</option>
+          <option value="last30">Últimos 30 días</option>
+          <option value="thismonth">Este mes</option>
+          <option value="lastmonth">Mes anterior</option>
+          <option value="ytd" selected>Todo 2026</option>
+          <option value="custom">Personalizado…</option>
+        </select>
+      </div>
+      <div class="filter-field" id="camp-custom-range-tt" style="display:none;">
+        <label for="camp-date-from-tt">Desde</label>
+        <input type="date" id="camp-date-from-tt" onchange="renderCampaignsTableTt()">
+        <label for="camp-date-to-tt">Hasta</label>
+        <input type="date" id="camp-date-to-tt" onchange="renderCampaignsTableTt()">
+      </div>
+      <div class="filter-field">
+        <label for="camp-type-tt">Tipo de campaña</label>
+        <select id="camp-type-tt" onchange="onCampTypeChangeTt()">
+          <option value="all" selected>Todos</option>
+          <option value="Ecommerce">Ecommerce</option>
+          <option value="Suscripción">Suscripción</option>
+          <option value="Leads">Leads</option>
+          <option value="Otros">Otros</option>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label>Campañas</label>
+        <div class="multiselect" id="camp-multiselect-tt">
+          <button type="button" class="multiselect-btn" id="camp-multiselect-btn-tt" onclick="toggleCampMultiselectTt()">Todas las campañas</button>
+          <div class="multiselect-panel" id="camp-multiselect-panel-tt" style="display:none;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Desglose por campaña <span class="period" id="camp-period-label-tt"></span></h2>
+    <div class="table-scroll">
+      <table id="data-table-camp-tt"></table>
+    </div>
+    <p class="footer-note">CPC y CTR calculados sobre clics. CR Lead y CR Compra = Leads/Compras sobre clics.<br>
+    Tipo de campaña se asigna por el nombre: <strong>Ecommerce</strong> = contiene "ecom"; <strong>Suscripción</strong> = contiene "suscri" y "PE" (purchase event); <strong>Leads</strong> = contiene "suscri" y "LE" (lead event); el resto queda en <strong>Otros</strong>.</p>
+  </div>
+
+
+  </div><!-- /tab-campanas -->
+
+  <div id="tab-comparativa-tt" class="tab-panel" style="display:none;">
+
+  <div class="panel">
+    <div class="filter-bar">
+      <div class="filter-field">
+        <label for="cmp-date-preset-tt">Periodo (2026)</label>
+        <select id="cmp-date-preset-tt" onchange="onCmpDatePresetChangeTt()">
+          <option value="today">Hoy</option>
+          <option value="yesterday">Ayer</option>
+          <option value="last7">Últimos 7 días</option>
+          <option value="last30">Últimos 30 días</option>
+          <option value="thismonth">Este mes</option>
+          <option value="lastmonth">Mes anterior</option>
+          <option value="ytd" selected>Todo 2026 (1 ene — ayer)</option>
+          <option value="custom">Personalizado…</option>
+        </select>
+      </div>
+      <div class="filter-field" id="cmp-custom-range-tt" style="display:none;">
+        <label for="cmp-date-from-tt">Desde</label>
+        <input type="date" id="cmp-date-from-tt" onchange="renderComparativaTableTt()">
+        <label for="cmp-date-to-tt">Hasta</label>
+        <input type="date" id="cmp-date-to-tt" onchange="renderComparativaTableTt()">
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Comparativa vs. mismo periodo de 2025 <span class="period" id="cmp-period-label-tt"></span></h2>
+    <div class="table-scroll">
+      <table id="data-table-cmp-tt"></table>
+    </div>
+    <p class="footer-note">El periodo de 2025 es exactamente el mismo rango de fechas (mismo día/mes) desplazado un año atrás. Variación = (2026 − 2025) / 2025. CPC y CTR calculados sobre clics. CR Lead y CR Compra = Leads/Compras sobre clics.</p>
+  </div>
+
+  </div><!-- /tab-comparativa -->
+
+
+  <div id="tab-insights-tt" class="tab-panel" style="display:none;">
+
+  <div class="panel">
+    <h2>Cuenta — resultados globales <span class="period" id="ins-period-label-tt"></span></h2>
+    <ul class="insights-list" id="ins-account-tt"></ul>
+  </div>
+
+  <h2 class="section-heading">Por tipología de campaña</h2>
+
+  <div class="panel">
+    <h2>Ecommerce <span class="period" id="ins-period-label-ecom-tt"></span></h2>
+    <ul class="insights-list" id="ins-ecommerce-tt"></ul>
+  </div>
+
+  <div class="panel">
+    <h2>Suscripción <span class="period" id="ins-period-label-susc-tt"></span></h2>
+    <ul class="insights-list" id="ins-suscripcion-tt"></ul>
+  </div>
+
+  <div class="panel">
+    <h2>Leads <span class="period" id="ins-period-label-leads-tt"></span></h2>
+    <ul class="insights-list" id="ins-leads-tt"></ul>
+  </div>
+
+  </div><!-- /tab-insights -->
+
+
+  </div><!-- /platform-tt -->
+
+</div>
+<div class="tooltip" id="tooltip"></div>
+<script>
+let DATA, DATA_TT;
+async function __loadJSON(url) {
+  const r = await fetch(url, {cache: 'no-store'});
+  if (!r.ok) throw new Error('No se pudo cargar ' + url + ' (' + r.status + ')');
+  return await r.json();
+}
+(async function() {
+  DATA = await __loadJSON('data_meta.json');
+  DATA_TT = await __loadJSON('data_tt.json');
+
+
+/* ============ FORMATTERS ============ */
+const fmtEUR = (v) => new Intl.NumberFormat('es-ES', {style:'currency', currency:'EUR', maximumFractionDigits: v>=1000?0:2}).format(v);
+const fmtEUR2 = (v) => new Intl.NumberFormat('es-ES', {style:'currency', currency:'EUR', minimumFractionDigits:2, maximumFractionDigits:2}).format(v);
+const fmtNum = (v) => new Intl.NumberFormat('es-ES').format(Math.round(v));
+const fmtNum2 = (v) => new Intl.NumberFormat('es-ES', {minimumFractionDigits:2, maximumFractionDigits:2}).format(v);
+const fmtPct = (v) => new Intl.NumberFormat('es-ES', {minimumFractionDigits:2, maximumFractionDigits:2}).format(v) + ' %';
+
+/* ============ CAMPAIGN TYPE CLASSIFICATION ============ */
+/* Movido aquí arriba (antes vivía junto a la pestaña Campañas) porque el filtro
+   compartido de Mensual/Semanal/Diario necesita campaignType ya listo antes. */
+function classifyCampaign(name) {
+  const n = name.toLowerCase();
+  if (n.includes('ecom')) return 'Ecommerce';
+  const hasSuscri = n.includes('suscri');
+  const hasPE = /(^|[_\-\s(])pe([_\-\s)]|$)/.test(n);
+  const hasLE = /(^|[_\-\s(])le([_\-\s)]|$)/.test(n);
+  if (hasSuscri && hasPE) return 'Suscripción';
+  if (hasSuscri && hasLE) return 'Leads';
+  return 'Otros';
+}
+const campaignType = {};
+DATA.campaignsList.forEach(c => { campaignType[c] = classifyCampaign(c); });
+let globalCampTypeFilter = 'all'; // compartido con Mensual/Semanal/Diario y ahora también con este resumen
+const fmtDate = (iso) => {
+  const d = new Date(iso);
+  return d.toLocaleDateString('es-ES', {day:'2-digit', month:'long', year:'numeric'});
+};
+
+document.getElementById('update-label').textContent = 'Actualizado hasta el ' + fmtDate(DATA.period_to);
+document.getElementById('period-label').textContent = '(1 enero ' + new Date(DATA.period_from).getFullYear() + ' — ' + fmtDate(DATA.period_to) + ')';
+
+/* ============ STAT TILES (últimos 7 días vs 7 días anteriores) ============ */
+const last7 = DATA.last7d, prev7 = DATA.prev7d;
+// direction: 'up_good' = subir es mejora (verde), 'down_good' = bajar es mejora (verde), 'neutral' = sin color
+const statDefs = [
+  {label:'Inversión', key:'spend', fmt: fmtEUR, direction:'neutral'},
+  {label:'ROAS', key:'roas', fmt: fmtNum2, direction:'up_good'},
+  {label:'Compras', key:'purchases', fmt: fmtNum, direction:'up_good'},
+  {label:'Leads', key:'leads', fmt: fmtNum, direction:'up_good'},
+  {label:'CPL', key:'cpl', fmt: fmtEUR2, direction:'down_good'},
+  {label:'CPA', key:'cpa', fmt: fmtEUR2, direction:'down_good'},
+];
+function deltaBadge(curr, prev, direction) {
+  if (!isFinite(curr) || !isFinite(prev) || prev === 0) return '';
+  const pct = (curr - prev) / prev * 100;
+  const sign = pct > 0 ? '+' : '';
+  const pctStr = sign + fmtNum2(pct) + ' %';
+  let colorVar = 'var(--text-muted)';
+  if (direction === 'up_good') colorVar = pct >= 0 ? 'var(--delta-good)' : 'var(--delta-bad)';
+  else if (direction === 'down_good') colorVar = pct <= 0 ? 'var(--delta-good)' : 'var(--delta-bad)';
+  return `<span class="stat-delta" style="color:${colorVar}">${pctStr}</span>`;
+}
+function aggByTypeAndRange(type, from, to) {
+  const acc = emptyAggJs();
+  DATA.campaignsRaw.forEach(r => {
+    if (r[0] < from || r[0] > to) return;
+    if (campaignType[r[1]] !== type) return;
+    addAggJs(acc, r);
+  });
+  return acc;
+}
+function renderMainStatRow() {
+  const filter = globalCampTypeFilter;
+  const last7Data = filter === 'all' ? last7 : deriveDay(aggByTypeAndRange(filter, last7.from, last7.to));
+  const prev7Data = filter === 'all' ? prev7 : deriveDay(aggByTypeAndRange(filter, prev7.from, prev7.to));
+  const stats = statDefs.map(s => ({
+    label: s.label,
+    value: s.fmt(last7Data[s.key]),
+    delta: deltaBadge(last7Data[s.key], prev7Data[s.key], s.direction),
+  }));
+  document.getElementById('stat-row').innerHTML = stats.map(s =>
+    `<div class="stat-tile"><div class="label">${s.label}</div><div class="value">${s.value}</div>${s.delta}</div>`
+  ).join('');
+  const typeLabel = filter === 'all' ? '' : ' · Solo campañas de ' + filter;
+  document.getElementById('stat-period-label').textContent =
+    fmtDate(last7.from) + ' – ' + fmtDate(last7.to) + ' vs. periodo anterior (' + fmtDate(prev7.from) + ' – ' + fmtDate(prev7.to) + ')' + typeLabel;
+}
+try { renderMainStatRow(); } catch(e) { console.error('Fallo en: stat tiles generales', e); }
+
+/* ============ TABLE ============ */
+const cols = [
+  {key:'spend', label:'Inversión', fmt: fmtEUR},
+  {key:'roas', label:'ROAS', fmt: fmtNum2},
+  {key:'revenue', label:'Revenue', fmt: fmtEUR},
+  {key:'leads', label:'Leads', fmt: fmtNum},
+  {key:'purchases', label:'Compras', fmt: fmtNum},
+  {key:'cpm', label:'CPM', fmt: fmtEUR2},
+  {key:'cpc', label:'CPC sal.', fmt: fmtEUR2},
+  {key:'ctr', label:'CTR sal.', fmt: fmtPct},
+  {key:'cr_lead', label:'CR Lead', fmt: fmtPct},
+  {key:'cr_purchase', label:'CR Compra', fmt: fmtPct},
+  {key:'cpl', label:'CPL', fmt: fmtEUR2},
+  {key:'cpa', label:'CPA', fmt: fmtEUR2},
+  {key:'visits', label:'Visitas', fmt: fmtNum},
+  {key:'frequency', label:'Frecuencia', fmt: fmtNum2},
+  {key:'aov', label:'AOV', fmt: fmtEUR2},
+];
+function buildTable(tableId, rowsObj, labelsArr, firstColLabel) {
+  const table = document.getElementById(tableId);
+  let thead = `<thead><tr><th>${firstColLabel}</th>` + cols.map(c=>`<th>${c.label}</th>`).join('') + '</tr></thead>';
+  let tbody = '<tbody>';
+  labelsArr.forEach(lab => {
+    const r = rowsObj[lab];
+    tbody += `<tr><td class="month-cell">${lab}</td>` + cols.map(c=>`<td>${c.fmt(r[c.key])}</td>`).join('') + '</tr>';
+  });
+  const tr = rowsObj["Total"];
+  tbody += `<tr class="total-row"><td class="month-cell">Total</td>` + cols.map(c=>`<td>${c.fmt(tr[c.key])}</td>`).join('') + '</tr>';
+  tbody += '</tbody>';
+  table.innerHTML = thead + tbody;
+}
+try { buildTable('data-table', DATA.rows, DATA.months, 'Mes'); } catch(e) { console.error('Fallo en: Meta mensual', e); }
+try { buildTable('data-table-w', DATA.weekly.rows, DATA.weekly.labels, 'Semana'); } catch(e) { console.error('Fallo en: Meta semanal', e); }
+document.getElementById('period-label-w').textContent = document.getElementById('period-label').textContent;
+
+/* ============ DAILY TAB: always last 30 days up to yesterday ============ */
+function deriveDay(d) {
+  return {
+    spend: d.spend,
+    roas: d.spend ? d.revenue / d.spend : 0,
+    revenue: d.revenue,
+    leads: d.leads,
+    purchases: d.purchases,
+    cpm: d.impressions ? d.spend / d.impressions * 1000 : 0,
+    cpc: d.outbound ? d.spend / d.outbound : 0,
+    ctr: d.impressions ? d.outbound / d.impressions * 100 : 0,
+    cr_lead: d.outbound ? d.leads / d.outbound * 100 : 0,
+    cr_purchase: d.outbound ? d.purchases / d.outbound * 100 : 0,
+    cpl: d.leads ? d.spend / d.leads : 0,
+    cpa: d.purchases ? d.spend / d.purchases : 0,
+    visits: d.visits,
+    frequency: d.reach ? d.impressions / d.reach : 0,
+    aov: d.purchases ? d.revenue / d.purchases : 0,
+  };
+}
+const last30Raw = DATA.dailyRaw.slice(-30);
+const dayLabel = (iso) => iso.slice(8,10) + '/' + iso.slice(5,7);
+const days_ = last30Raw.map(d => dayLabel(d.date));
+const dailyRows = {};
+last30Raw.forEach((d,i) => { dailyRows[days_[i]] = deriveDay(d); });
+const daily30Totals = last30Raw.reduce((acc,d) => {
+  acc.spend+=d.spend; acc.revenue+=d.revenue; acc.purchases+=d.purchases; acc.leads+=d.leads;
+  acc.outbound+=d.outbound; acc.impressions+=d.impressions; acc.reach+=d.reach; acc.visits+=d.visits;
+  return acc;
+}, {spend:0, revenue:0, purchases:0, leads:0, outbound:0, impressions:0, reach:0, visits:0});
+dailyRows["Total"] = deriveDay(daily30Totals);
+
+/* ============ FILTRO "TIPO DE CAMPAÑA" compartido entre resumen/Mensual/Semanal/Diario ============ */
+const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function monthLabelFor(dateStr) { return MONTH_ABBR[parseInt(dateStr.slice(5,7), 10) - 1]; }
+function mondayOf(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const day = (d.getDay() + 6) % 7; // 0 = lunes
+  d.setDate(d.getDate() - day);
+  return d;
+}
+const __firstMondayGlobal = mondayOf(DATA.period_from);
+function weekLabelFor(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const diffDays = Math.round((d - __firstMondayGlobal) / 86400000);
+  return 'S' + (Math.floor(diffDays / 7) + 1);
+}
+function emptyAggJs() { return {spend:0, revenue:0, purchases:0, leads:0, outbound:0, impressions:0, reach:0, visits:0}; }
+function addAggJs(acc, r) {
+  acc.spend+=r[2]; acc.revenue+=r[3]; acc.purchases+=r[4]; acc.leads+=r[5];
+  acc.outbound+=r[6]; acc.impressions+=r[7]; acc.reach+=r[8]; acc.visits+=r[9];
+}
+function sumAggJs(a, b) {
+  a.spend+=b.spend; a.revenue+=b.revenue; a.purchases+=b.purchases; a.leads+=b.leads;
+  a.outbound+=b.outbound; a.impressions+=b.impressions; a.reach+=b.reach; a.visits+=b.visits;
+}
+
+function renderMensualTable() {
+  const rowsObj = globalCampTypeFilter === 'all' ? DATA.rows : computeFilteredMonthlyRows();
+  buildTable('data-table', rowsObj, DATA.months, 'Mes');
+  drawMensualCharts(rowsObj);
+}
+function computeFilteredMonthlyRows() {
+  const byMonth = {};
+  DATA.campaignsRaw.forEach(r => {
+    if (campaignType[r[1]] !== globalCampTypeFilter) return;
+    const m = monthLabelFor(r[0]);
+    if (!byMonth[m]) byMonth[m] = emptyAggJs();
+    addAggJs(byMonth[m], r);
+  });
+  const rowsObj = {};
+  const total = emptyAggJs();
+  DATA.months.forEach(m => { const b = byMonth[m] || emptyAggJs(); rowsObj[m] = deriveDay(b); sumAggJs(total, b); });
+  rowsObj['Total'] = deriveDay(total);
+  return rowsObj;
+}
+
+function renderSemanalTable() {
+  const rowsObj = globalCampTypeFilter === 'all' ? DATA.weekly.rows : computeFilteredWeeklyRows();
+  buildTable('data-table-w', rowsObj, DATA.weekly.labels, 'Semana');
+  drawSemanalCharts(rowsObj);
+}
+function computeFilteredWeeklyRows() {
+  const byWeek = {};
+  DATA.campaignsRaw.forEach(r => {
+    if (campaignType[r[1]] !== globalCampTypeFilter) return;
+    const w = weekLabelFor(r[0]);
+    if (!byWeek[w]) byWeek[w] = emptyAggJs();
+    addAggJs(byWeek[w], r);
+  });
+  const rowsObj = {};
+  const total = emptyAggJs();
+  DATA.weekly.labels.forEach(w => { const b = byWeek[w] || emptyAggJs(); rowsObj[w] = deriveDay(b); sumAggJs(total, b); });
+  rowsObj['Total'] = deriveDay(total);
+  return rowsObj;
+}
+
+function renderDiarioTable() {
+  if (globalCampTypeFilter === 'all') {
+    buildTable('data-table-d', dailyRows, days_, 'Día');
+    drawDiarioCharts(dailyRows, days_);
+    document.getElementById('period-label-d').textContent = last30Raw.length
+      ? '(' + fmtDate(last30Raw[0].date) + ' — ' + fmtDate(last30Raw[last30Raw.length-1].date) + ')'
+      : '(sin datos diarios)';
+    return;
+  }
+  const datesLast30 = last30Raw.map(d => d.date);
+  const byDate = {};
+  datesLast30.forEach(d => { byDate[d] = emptyAggJs(); });
+  DATA.campaignsRaw.forEach(r => {
+    if (!(r[0] in byDate)) return;
+    if (campaignType[r[1]] !== globalCampTypeFilter) return;
+    addAggJs(byDate[r[0]], r);
+  });
+  const labels = datesLast30.map(dayLabel);
+  const rowsObj = {};
+  const total = emptyAggJs();
+  datesLast30.forEach((d,i) => { rowsObj[labels[i]] = deriveDay(byDate[d]); sumAggJs(total, byDate[d]); });
+  rowsObj['Total'] = deriveDay(total);
+  buildTable('data-table-d', rowsObj, labels, 'Día');
+  drawDiarioCharts(rowsObj, labels);
+  document.getElementById('period-label-d').textContent = datesLast30.length
+    ? '(' + fmtDate(datesLast30[0]) + ' — ' + fmtDate(datesLast30[datesLast30.length-1]) + ')'
+    : '(sin datos diarios)';
+}
+
+function onGlobalTypeFilterChange(val) {
+  globalCampTypeFilter = val;
+  ['mensual-type-filter','semanal-type-filter','diario-type-filter'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = val;
+  });
+  try { renderMensualTable(); } catch(e) { console.error('Fallo en: Meta mensual (filtro tipo)', e); }
+  try { renderSemanalTable(); } catch(e) { console.error('Fallo en: Meta semanal (filtro tipo)', e); }
+  try { renderDiarioTable(); } catch(e) { console.error('Fallo en: Meta diario (filtro tipo)', e); }
+  try { renderMainStatRow(); } catch(e) { console.error('Fallo en: stat tiles generales (filtro tipo)', e); }
+}
+window.onGlobalTypeFilterChange = onGlobalTypeFilterChange;
+
+try { renderMensualTable(); } catch(e) { console.error('Fallo en: Meta mensual', e); }
+try { renderSemanalTable(); } catch(e) { console.error('Fallo en: Meta semanal', e); }
+try { renderDiarioTable(); } catch(e) { console.error('Fallo en: Meta diario', e); }
+
+/* ============ TABS ============ */
+const TABS = ['mensual', 'semanal', 'diario', 'campanas', 'landings', 'comparativa', 'insights'];
+function switchTab(tab) {
+  TABS.forEach(t => {
+    document.getElementById('tab-' + t).style.display = (t === tab) ? '' : 'none';
+  });
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-tab') === tab);
+  });
+}
+window.switchTab = switchTab;
+
+/* ============ CHARTS ============ */
+const tooltip = document.getElementById('tooltip');
+
+function showTooltip(evt, html) {
+  tooltip.innerHTML = html;
+  tooltip.style.opacity = 1;
+  tooltip.style.left = evt.pageX + 'px';
+  tooltip.style.top = evt.pageY + 'px';
+}
+function hideTooltip() { tooltip.style.opacity = 0; }
+
+function niceMax(v) {
+  if (v <= 0) return 1;
+  const mag = Math.pow(10, Math.floor(Math.log10(v)));
+  const norm = v / mag;
+  let step;
+  if (norm <= 1) step = 1;
+  else if (norm <= 2) step = 2;
+  else if (norm <= 5) step = 5;
+  else step = 10;
+  return step * mag;
+}
+
+function applyWidth(svg, W) {
+  if (W > 520) { svg.style.width = W + 'px'; svg.style.maxWidth = 'none'; }
+  else { svg.style.width = ''; svg.style.maxWidth = ''; }
+}
+
+function drawBarChart(svgId, values, labels, fmt, width) {
+  const svg = document.getElementById(svgId);
+  const W = width || Math.max(520, values.length * 46), H = 210;
+  const padL = 44, padR = 12, padT = 14, padB = 26;
+  const innerW = W - padL - padR, innerH = H - padT - padB;
+  const maxV = niceMax(Math.max(...values) * 1.15);
+  const n = values.length;
+  const bandW = innerW / n;
+  const barW = Math.min(24, bandW * 0.55);
+
+  let svgContent = `<g>`;
+  // gridlines (4 steps)
+  const steps = 4;
+  for (let i=0; i<=steps; i++) {
+    const gv = maxV * i / steps;
+    const gy = padT + innerH - (gv/maxV)*innerH;
+    svgContent += `<line class="gridline" x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}"/>`;
+  }
+  // Solo se ocultan los valores encima de cada barra si de verdad no cabe (categorías
+  // muy numerosas); el umbral se ajustó porque antes se activaba también en Semanal/Diario
+  // sin necesidad. Los ejes (fechas/semanas) sí se siguen espaciando para no amontonarse.
+  const denseChart = bandW < 20; // umbral real de solape, no el falso positivo de antes
+  const axisStep = bandW < 18 ? 7 : bandW < 30 ? 3 : 1;
+  values.forEach((v, i) => {
+    const x = padL + i*bandW + (bandW-barW)/2;
+    const barH = (v/maxV)*innerH;
+    const y = padT + innerH - barH;
+    svgContent += `<rect class="bar" x="${x}" y="${y}" width="${barW}" height="${Math.max(barH,1)}" rx="4" ry="4"/>`;
+    if (!denseChart) {
+      svgContent += `<text class="bar-value" x="${x+barW/2}" y="${y-6}" text-anchor="middle">${fmt(v)}</text>`;
+    }
+    if (i % axisStep === 0 || i === values.length - 1) {
+      svgContent += `<text class="axis-label" x="${x+barW/2}" y="${H-8}" text-anchor="middle">${labels[i]}</text>`;
+    }
+    svgContent += `<rect class="hover-target" data-i="${i}" x="${padL + i*bandW}" y="${padT}" width="${bandW}" height="${innerH}"/>`;
+  });
+  svgContent += `</g>`;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  applyWidth(svg, W);
+  svg.innerHTML = svgContent;
+
+  svg.querySelectorAll('.hover-target').forEach(el => {
+    el.addEventListener('mousemove', (e) => {
+      const i = +el.getAttribute('data-i');
+      showTooltip(e, `<strong>${labels[i]}</strong><br>${fmt(values[i])}`);
+    });
+    el.addEventListener('mouseleave', hideTooltip);
+  });
+}
+
+function drawLineChart(svgId, values, labels, fmt, width) {
+  const svg = document.getElementById(svgId);
+  const W = width || Math.max(520, values.length * 46), H = 210;
+  const padL = 44, padR = 14, padT = 20, padB = 26;
+  const innerW = W - padL - padR, innerH = H - padT - padB;
+  const maxV = niceMax(Math.max(...values) * 1.2);
+  const minV = 0;
+  const n = values.length;
+  const stepX = innerW / (n-1);
+
+  const points = values.map((v,i) => {
+    const x = padL + i*stepX;
+    const y = padT + innerH - ((v-minV)/(maxV-minV))*innerH;
+    return [x,y];
+  });
+
+  let svgContent = `<g>`;
+  const steps = 4;
+  for (let i=0; i<=steps; i++) {
+    const gv = maxV * i / steps;
+    const gy = padT + innerH - (gv/maxV)*innerH;
+    svgContent += `<line class="gridline" x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}"/>`;
+  }
+  const denseChart = stepX < 20; // umbral real de solape, no el falso positivo de antes
+  const axisStep = stepX < 18 ? 7 : stepX < 30 ? 3 : 1;
+  const pathD = points.map((p,i) => (i===0?'M':'L') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+  svgContent += `<path class="line-path" d="${pathD}"/>`;
+  points.forEach((p,i) => {
+    svgContent += `<circle class="line-dot" cx="${p[0]}" cy="${p[1]}" r="4"/>`;
+    if (i % axisStep === 0 || i === points.length - 1) {
+      svgContent += `<text class="axis-label" x="${p[0]}" y="${H-8}" text-anchor="middle">${labels[i]}</text>`;
+    }
+  });
+  // label every point when there's room; otherwise rely on the hover tooltip
+  if (!denseChart) {
+    points.forEach((p,i) => {
+      svgContent += `<text class="line-value" x="${p[0]}" y="${p[1]-10}" text-anchor="middle">${fmt(values[i])}</text>`;
+    });
+  }
+
+  points.forEach((p,i) => {
+    svgContent += `<rect class="hover-target" data-i="${i}" x="${padL + i*stepX - stepX/2}" y="${padT}" width="${stepX}" height="${innerH}"/>`;
+  });
+  svgContent += `</g>`;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  applyWidth(svg, W);
+  svg.innerHTML = svgContent;
+
+  svg.querySelectorAll('.hover-target').forEach(el => {
+    el.addEventListener('mousemove', (e) => {
+      const i = +el.getAttribute('data-i');
+      showTooltip(e, `<strong>${labels[i]}</strong><br>${fmt(values[i])}`);
+    });
+    el.addEventListener('mouseleave', hideTooltip);
+  });
+}
+
+function drawMultiLineChart(svgId, legendId, series, labels, fmt, width) {
+  // series: [{name, values, color}]
+  const svg = document.getElementById(svgId);
+  const W = width || Math.max(520, labels.length * 46), H = 210;
+  const padL = 44, padR = 14, padT = 20 + (series.length-1)*12, padB = 26;
+  const innerW = W - padL - padR, innerH = H - padT - padB;
+  const allValues = series.flatMap(s => s.values);
+  const maxV = niceMax(Math.max(...allValues) * 1.25);
+  const minV = 0;
+  const n = labels.length;
+  const stepX = innerW / (n-1);
+
+  const toPoints = (values) => values.map((v,i) => {
+    const x = padL + i*stepX;
+    const y = padT + innerH - ((v-minV)/(maxV-minV))*innerH;
+    return [x,y];
+  });
+
+  let svgContent = `<g>`;
+  const steps = 4;
+  for (let i=0; i<=steps; i++) {
+    const gv = maxV * i / steps;
+    const gy = padT + innerH - (gv/maxV)*innerH;
+    svgContent += `<line class="gridline" x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}"/>`;
+  }
+
+  const denseChart = stepX < 20; // umbral real de solape, no el falso positivo de antes
+  const axisStep = stepX < 18 ? 7 : stepX < 30 ? 3 : 1;
+
+  series.forEach((s, si) => {
+    const points = toPoints(s.values);
+    const pathD = points.map((p,i) => (i===0?'M':'L') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+    svgContent += `<path class="line-path" d="${pathD}" style="stroke:${s.color}"/>`;
+    // stagger label offset per series so overlapping lines don't collide
+    const labelDy = -10 - (si * 12);
+    points.forEach((p,i) => {
+      svgContent += `<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="${s.color}" stroke="var(--surface-1)" stroke-width="2"/>`;
+      if (!denseChart) {
+        svgContent += `<text class="line-value" x="${p[0]}" y="${p[1]+labelDy}" text-anchor="middle">${fmt(s.values[i])}</text>`;
+      }
+    });
+  });
+
+  labels.forEach((lab,i) => {
+    const x = padL + i*stepX;
+    if (i % axisStep === 0 || i === labels.length - 1) {
+      svgContent += `<text class="axis-label" x="${x}" y="${H-8}" text-anchor="middle">${lab}</text>`;
+    }
+    svgContent += `<rect class="hover-target" data-i="${i}" x="${x - stepX/2}" y="${padT}" width="${stepX}" height="${innerH}"/>`;
+  });
+
+  svgContent += `</g>`;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  applyWidth(svg, W);
+  svg.innerHTML = svgContent;
+
+  svg.querySelectorAll('.hover-target').forEach(el => {
+    el.addEventListener('mousemove', (e) => {
+      const i = +el.getAttribute('data-i');
+      const lines = series.map(s => `${s.name}: ${fmt(s.values[i])}`).join('<br>');
+      showTooltip(e, `<strong>${labels[i]}</strong><br>${lines}`);
+    });
+    el.addEventListener('mouseleave', hideTooltip);
+  });
+
+  if (legendId) {
+    const legend = document.getElementById(legendId);
+    legend.innerHTML = series.map(s =>
+      `<span class="legend-item"><span class="legend-swatch" style="background:${s.color}"></span>${s.name}</span>`
+    ).join('');
+  }
+}
+
+function drawMensualCharts(rowsObj) {
+  const monthsL = DATA.months;
+  const get = (key) => monthsL.map(m => rowsObj[m][key]);
+  drawBarChart('chart-spend', get('spend'), monthsL, fmtEUR);
+  drawLineChart('chart-roas', get('roas'), monthsL, fmtNum2);
+  drawBarChart('chart-purchases', get('purchases'), monthsL, fmtNum);
+  drawLineChart('chart-cpa', get('cpa'), monthsL, fmtEUR2);
+  drawBarChart('chart-leads', get('leads'), monthsL, fmtNum);
+  drawLineChart('chart-cpl', get('cpl'), monthsL, fmtEUR2);
+  drawBarChart('chart-frequency', get('frequency'), monthsL, fmtNum2);
+  drawMultiLineChart('chart-ctrcr-leads', 'legend-ctrcr-leads', [
+    {name:'CTR (saliente)', values: get('ctr'), color: 'var(--series-ctr)'},
+    {name:'CR Lead', values: get('cr_lead'), color: 'var(--series-crlead)'},
+  ], monthsL, fmtPct);
+  drawMultiLineChart('chart-ctrcr-purchases', 'legend-ctrcr-purchases', [
+    {name:'CTR (saliente)', values: get('ctr'), color: 'var(--series-ctr)'},
+    {name:'CR Compra', values: get('cr_purchase'), color: 'var(--series-crpurch)'},
+  ], monthsL, fmtPct);
+}
+
+/* ============ WEEKLY CHARTS ============ */
+function drawSemanalCharts(rowsObj) {
+  const weeksL = DATA.weekly.labels;
+  const getW = (key) => weeksL.map(w => rowsObj[w][key]);
+  drawBarChart('chart-spend-w', getW('spend'), weeksL, fmtEUR);
+  drawLineChart('chart-roas-w', getW('roas'), weeksL, fmtNum2);
+  drawBarChart('chart-purchases-w', getW('purchases'), weeksL, fmtNum);
+  drawLineChart('chart-cpa-w', getW('cpa'), weeksL, fmtEUR2);
+  drawBarChart('chart-leads-w', getW('leads'), weeksL, fmtNum);
+  drawLineChart('chart-cpl-w', getW('cpl'), weeksL, fmtEUR2);
+  drawBarChart('chart-frequency-w', getW('frequency'), weeksL, fmtNum2);
+  drawMultiLineChart('chart-ctrcr-leads-w', 'legend-ctrcr-leads-w', [
+    {name:'CTR (saliente)', values: getW('ctr'), color: 'var(--series-ctr)'},
+    {name:'CR Lead', values: getW('cr_lead'), color: 'var(--series-crlead)'},
+  ], weeksL, fmtPct);
+  drawMultiLineChart('chart-ctrcr-purchases-w', 'legend-ctrcr-purchases-w', [
+    {name:'CTR (saliente)', values: getW('ctr'), color: 'var(--series-ctr)'},
+    {name:'CR Compra', values: getW('cr_purchase'), color: 'var(--series-crpurch)'},
+  ], weeksL, fmtPct);
+}
+
+/* ============ DAILY CHARTS (last 30 days) ============ */
+function drawDiarioCharts(rowsObj, labelsL) {
+  const getD = (key) => labelsL.map(d => rowsObj[d][key]);
+  const width = Math.max(520, labelsL.length * 46);
+  drawBarChart('chart-spend-d', getD('spend'), labelsL, fmtEUR, width);
+  drawLineChart('chart-roas-d', getD('roas'), labelsL, fmtNum2, width);
+  drawBarChart('chart-purchases-d', getD('purchases'), labelsL, fmtNum, width);
+  drawLineChart('chart-cpa-d', getD('cpa'), labelsL, fmtEUR2, width);
+  drawBarChart('chart-leads-d', getD('leads'), labelsL, fmtNum, width);
+  drawLineChart('chart-cpl-d', getD('cpl'), labelsL, fmtEUR2, width);
+  drawBarChart('chart-frequency-d', getD('frequency'), labelsL, fmtNum2, width);
+  drawMultiLineChart('chart-ctrcr-leads-d', 'legend-ctrcr-leads-d', [
+    {name:'CTR (saliente)', values: getD('ctr'), color: 'var(--series-ctr)'},
+    {name:'CR Lead', values: getD('cr_lead'), color: 'var(--series-crlead)'},
+  ], labelsL, fmtPct, width);
+  drawMultiLineChart('chart-ctrcr-purchases-d', 'legend-ctrcr-purchases-d', [
+    {name:'CTR (saliente)', values: getD('ctr'), color: 'var(--series-ctr)'},
+    {name:'CR Compra', values: getD('cr_purchase'), color: 'var(--series-crpurch)'},
+  ], labelsL, fmtPct, width);
+}
+
+
+/* ============ CAMPAIGNS & CREATIVES TAB ============ */
+const LAST_DATE_ISO = DATA.campaignsRaw.length
+  ? DATA.campaignsRaw.reduce((max,r) => r[0] > max ? r[0] : max, DATA.campaignsRaw[0][0])
+  : DATA.period_to;
+
+function statusPill(s) {
+  if (!s) return '<span class="status-pill paused"><span class="dot"></span>—</span>';
+  const active = String(s).toUpperCase() === 'ACTIVE';
+  return `<span class="status-pill ${active?'active':'paused'}"><span class="dot"></span>${active?'Activo':'Pausado'}</span>`;
+}
+const campCols = [{key:'status', label:'Estado', fmt: statusPill}, ...cols];
+const adCols = [...campCols,
+  {key:'hook_rate', label:'Hook Rate', fmt: fmtPct},
+  {key:'hold_rate', label:'Hold Rate', fmt: fmtPct},
+  {key:'dest', label:'Destino', fmt: v => v ? `<a class="dest-link" href="${v}" target="_blank" rel="noopener">Ver enlace ↗</a>` : '—'},
+];
+
+const tableCache = {}; // tableId -> {rowsObj, labelsArr, firstColLabel, colsUsed, nameCellFn, sortKey, sortDir}
+
+function renderTableBody(tableId) {
+  const c = tableCache[tableId];
+  if (!c) return;
+  const { rowsObj, labelsArr, firstColLabel, colsUsed, nameCellFn, sortKey, sortDir } = c;
+  let sortedLabels = labelsArr.slice();
+  if (sortKey) {
+    sortedLabels.sort((a,b) => {
+      let av = sortKey === '__name__' ? a : rowsObj[a][sortKey];
+      let bv = sortKey === '__name__' ? b : rowsObj[b][sortKey];
+      if (av === null || av === undefined || !isFinite(av)) av = (typeof bv === 'string') ? '' : -Infinity;
+      if (bv === null || bv === undefined || !isFinite(bv)) bv = (typeof av === 'string') ? '' : -Infinity;
+      if (av < bv) return -1 * sortDir;
+      if (av > bv) return 1 * sortDir;
+      return 0;
+    });
+  }
+  const table = document.getElementById(tableId);
+  function thHtml(key, label) {
+    const isSorted = sortKey === key;
+    const arrow = isSorted ? (sortDir === 1 ? '▲' : '▼') : '⇅';
+    return `<th data-key="${key}" class="${isSorted?'sorted':''}">${label}<span class="sort-arrow">${arrow}</span></th>`;
+  }
+  let thead = `<thead><tr>${thHtml('__name__', firstColLabel)}${colsUsed.map(cc=>thHtml(cc.key, cc.label)).join('')}</tr></thead>`;
+  let tbody = '<tbody>';
+  sortedLabels.forEach(lab => {
+    const r = rowsObj[lab];
+    tbody += `<tr><td class="month-cell">${nameCellFn(lab, r)}</td>` + colsUsed.map(cc => `<td>${cc.fmt(r[cc.key])}</td>`).join('') + '</tr>';
+  });
+  const tr = rowsObj["Total"];
+  tbody += `<tr class="total-row"><td class="month-cell">Total</td>` + colsUsed.map(cc => `<td>${cc.key==='status'||cc.key==='dest'?'':cc.fmt(tr[cc.key])}</td>`).join('') + '</tr>';
+  tbody += '</tbody>';
+  table.classList.add('sortable');
+  table.innerHTML = thead + tbody;
+  table.querySelectorAll('thead th').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.key;
+      if (c.sortKey === key) { c.sortDir *= -1; } else { c.sortKey = key; c.sortDir = 1; }
+      renderTableBody(tableId);
+    });
+  });
+}
+
+function buildCampaignsTable(tableId, rowsObj, labelsArr, firstColLabel, opts) {
+  opts = opts || {};
+  const colsUsed = opts.cols || cols;
+  const nameCellFn = opts.nameCellFn || ((lab) => `${lab}${campaignType[lab] ? `<span class="type-badge">${campaignType[lab]}</span>` : ''}`);
+  const prev = tableCache[tableId];
+  tableCache[tableId] = {
+    rowsObj, labelsArr: labelsArr.filter(l => l !== 'Total'), firstColLabel, colsUsed, nameCellFn,
+    sortKey: prev ? prev.sortKey : null,
+    sortDir: prev ? prev.sortDir : 1,
+  };
+  renderTableBody(tableId);
+}
+
+
+/* ============ FILTER STATE & LOGIC ============ */
+const campSelected = new Set(); // empty = "todas"
+let campMultiselectOpen = false;
+
+function pad2(n) { return String(n).padStart(2,'0'); }
+function isoDate(dt) { return dt.getFullYear() + '-' + pad2(dt.getMonth()+1) + '-' + pad2(dt.getDate()); }
+function addDays(dt, n) { const d = new Date(dt); d.setDate(d.getDate()+n); return d; }
+
+const LAST_DATE = new Date(LAST_DATE_ISO + 'T00:00:00');
+
+function resolveCampDateRange(preset) {
+  const y = LAST_DATE;
+  if (preset === 'today') return [isoDate(y), isoDate(y)];
+  if (preset === 'yesterday') return [isoDate(addDays(y,-1)), isoDate(addDays(y,-1))];
+  if (preset === 'last7') return [isoDate(addDays(y,-6)), isoDate(y)];
+  if (preset === 'last30') return [isoDate(addDays(y,-29)), isoDate(y)];
+  if (preset === 'thismonth') return [isoDate(new Date(y.getFullYear(), y.getMonth(), 1)), isoDate(y)];
+  if (preset === 'lastmonth') {
+    const firstThis = new Date(y.getFullYear(), y.getMonth(), 1);
+    const lastPrev = addDays(firstThis, -1);
+    const firstPrev = new Date(lastPrev.getFullYear(), lastPrev.getMonth(), 1);
+    return [isoDate(firstPrev), isoDate(lastPrev)];
+  }
+  if (preset === 'ytd') return [DATA.period_from, isoDate(y)];
+  return null; // custom
+}
+
+function onCampDatePresetChange() {
+  const preset = document.getElementById('camp-date-preset').value;
+  document.getElementById('camp-custom-range').style.display = preset === 'custom' ? 'flex' : 'none';
+  renderCampaignsTable();
+}
+function onCampTypeChange() { renderCampaignsTable(); }
+
+function toggleCampMultiselect() {
+  campMultiselectOpen = !campMultiselectOpen;
+  document.getElementById('camp-multiselect-panel').style.display = campMultiselectOpen ? 'block' : 'none';
+}
+document.addEventListener('click', (e) => {
+  if (campMultiselectOpen && !document.getElementById('camp-multiselect').contains(e.target)) {
+    campMultiselectOpen = false;
+    document.getElementById('camp-multiselect-panel').style.display = 'none';
+  }
+});
+
+function buildCampMultiselect() {
+  const panel = document.getElementById('camp-multiselect-panel');
+  let html = `<div class="multiselect-actions"><a onclick="campSelectAll()">Todas</a><a onclick="campSelectNone()">Ninguna</a></div>`;
+  DATA.campaignsList.forEach(c => {
+    html += `<label class="multiselect-option"><input type="checkbox" value="${c.replace(/"/g,'&quot;')}" onchange="onCampCheckboxChange(this)"> ${c} <span class="type-badge">${campaignType[c]}</span></label>`;
+  });
+  panel.innerHTML = html;
+}
+function onCampCheckboxChange(el) {
+  if (el.checked) campSelected.add(el.value); else campSelected.delete(el.value);
+  updateCampMultiselectLabel();
+  renderCampaignsTable();
+}
+window.campSelectAll = function() {
+  campSelected.clear();
+  document.querySelectorAll('#camp-multiselect-panel input[type=checkbox]').forEach(cb => cb.checked = false);
+  updateCampMultiselectLabel();
+  renderCampaignsTable();
+};
+window.campSelectNone = function() {
+  campSelected.clear();
+  document.querySelectorAll('#camp-multiselect-panel input[type=checkbox]').forEach(cb => { cb.checked = true; campSelected.add(cb.value); });
+  updateCampMultiselectLabel();
+  renderCampaignsTable();
+};
+function updateCampMultiselectLabel() {
+  const btn = document.getElementById('camp-multiselect-btn');
+  if (campSelected.size === 0) btn.textContent = 'Todas las campañas';
+  else if (campSelected.size === 1) btn.textContent = [...campSelected][0];
+  else btn.textContent = campSelected.size + ' campañas seleccionadas';
+}
+
+function renderCampaignsTable() {
+  const preset = document.getElementById('camp-date-preset').value;
+  let range = resolveCampDateRange(preset);
+  if (!range) {
+    const from = document.getElementById('camp-date-from').value;
+    const to = document.getElementById('camp-date-to').value;
+    if (!from || !to) return;
+    range = [from, to];
+  }
+  const [from, to] = range;
+  const typeFilter = document.getElementById('camp-type').value;
+  const statusFilter = document.getElementById('camp-status-filter').value;
+
+  const byCampaign = {};
+  DATA.campaignsRaw.forEach(r => {
+    const [date, campaign, spend, revenue, purchases, leads, outbound, impressions, reach, visits] = r;
+    if (date < from || date > to) return;
+    if (campSelected.size > 0 && !campSelected.has(campaign)) return;
+    if (typeFilter !== 'all' && campaignType[campaign] !== typeFilter) return;
+    if (statusFilter !== 'all' && ((DATA.campaignStatus && DATA.campaignStatus[campaign]) || '').toUpperCase() !== statusFilter) return;
+    if (!byCampaign[campaign]) byCampaign[campaign] = {spend:0, revenue:0, purchases:0, leads:0, outbound:0, impressions:0, reach:0, visits:0};
+    const b = byCampaign[campaign];
+    b.spend+=spend; b.revenue+=revenue; b.purchases+=purchases; b.leads+=leads;
+    b.outbound+=outbound; b.impressions+=impressions; b.reach+=reach; b.visits+=visits;
+  });
+
+  const campaignNames = Object.keys(byCampaign).sort((a,b) => byCampaign[b].spend - byCampaign[a].spend);
+  const rowsObj = {};
+  campaignNames.forEach(c => {
+    const r = deriveDay(byCampaign[c]);
+    r.status = DATA.campaignStatus ? DATA.campaignStatus[c] : null;
+    rowsObj[c] = r;
+  });
+  const grandTotal = campaignNames.reduce((acc,c) => {
+    const b = byCampaign[c];
+    acc.spend+=b.spend; acc.revenue+=b.revenue; acc.purchases+=b.purchases; acc.leads+=b.leads;
+    acc.outbound+=b.outbound; acc.impressions+=b.impressions; acc.reach+=b.reach; acc.visits+=b.visits;
+    return acc;
+  }, {spend:0, revenue:0, purchases:0, leads:0, outbound:0, impressions:0, reach:0, visits:0});
+  rowsObj["Total"] = deriveDay(grandTotal);
+
+  if (campaignNames.length === 0) {
+    document.getElementById('data-table-camp').innerHTML = '<tbody><tr><td style="padding:16px;color:var(--text-muted);">Sin datos para este periodo/selección.</td></tr></tbody>';
+  } else {
+    buildCampaignsTable('data-table-camp', rowsObj, campaignNames, 'Campaña', { cols: campCols });
+  }
+  document.getElementById('camp-period-label').textContent = '(' + fmtDate(from) + ' — ' + fmtDate(to) + ')';
+
+  // ---- Adsets (mismos filtros, agrupado por adset) ----
+  const byAdset = {};
+  (DATA.adsetsRaw || []).forEach(r => {
+    const [date, campaign, adset, spend, revenue, purchases, leads, outbound, impressions, reach, visits] = r;
+    if (date < from || date > to) return;
+    if (campSelected.size > 0 && !campSelected.has(campaign)) return;
+    if (typeFilter !== 'all' && campaignType[campaign] !== typeFilter) return;
+    if (statusFilter !== 'all' && ((DATA.adsetStatus && DATA.adsetStatus[adset]) || '').toUpperCase() !== statusFilter) return;
+    if (!byAdset[adset]) byAdset[adset] = {spend:0, revenue:0, purchases:0, leads:0, outbound:0, impressions:0, reach:0, visits:0};
+    const b = byAdset[adset];
+    b.spend+=spend; b.revenue+=revenue; b.purchases+=purchases; b.leads+=leads;
+    b.outbound+=outbound; b.impressions+=impressions; b.reach+=reach; b.visits+=visits;
+  });
+  const adsetNames = Object.keys(byAdset).sort((a,b) => byAdset[b].spend - byAdset[a].spend);
+  const rowsObjAdset = {};
+  adsetNames.forEach(a => {
+    const r = deriveDay(byAdset[a]);
+    r.status = DATA.adsetStatus ? DATA.adsetStatus[a] : null;
+    rowsObjAdset[a] = r;
+  });
+  const grandTotalAdset = adsetNames.reduce((acc,a) => {
+    const b = byAdset[a];
+    acc.spend+=b.spend; acc.revenue+=b.revenue; acc.purchases+=b.purchases; acc.leads+=b.leads;
+    acc.outbound+=b.outbound; acc.impressions+=b.impressions; acc.reach+=b.reach; acc.visits+=b.visits;
+    return acc;
+  }, {spend:0, revenue:0, purchases:0, leads:0, outbound:0, impressions:0, reach:0, visits:0});
+  rowsObjAdset["Total"] = deriveDay(grandTotalAdset);
+
+  if (adsetNames.length === 0) {
+    document.getElementById('data-table-camp-adset').innerHTML = '<tbody><tr><td style="padding:16px;color:var(--text-muted);">Sin datos para este periodo/selección.</td></tr></tbody>';
+  } else {
+    buildCampaignsTable('data-table-camp-adset', rowsObjAdset, adsetNames, 'Adset', { cols: campCols, nameCellFn: (lab) => lab });
+  }
+  document.getElementById('camp-period-label-adset').textContent = '(' + fmtDate(from) + ' — ' + fmtDate(to) + ')';
+
+  // ---- Anuncios/creatividades (mismos filtros, agrupado por anuncio) ----
+  const byAd = {};
+  (DATA.adsRaw || []).forEach(r => {
+    const [date, campaign, adset, ad, spend, revenue, purchases, leads, outbound, impressions, reach, visits, hookNum, holdNum] = r;
+    if (date < from || date > to) return;
+    if (campSelected.size > 0 && !campSelected.has(campaign)) return;
+    if (typeFilter !== 'all' && campaignType[campaign] !== typeFilter) return;
+    if (statusFilter !== 'all' && ((DATA.adStatus && DATA.adStatus[ad]) || '').toUpperCase() !== statusFilter) return;
+    if (!byAd[ad]) byAd[ad] = {spend:0, revenue:0, purchases:0, leads:0, outbound:0, impressions:0, reach:0, visits:0, hookNum:0, holdNum:0};
+    const b = byAd[ad];
+    b.spend+=spend; b.revenue+=revenue; b.purchases+=purchases; b.leads+=leads;
+    b.outbound+=outbound; b.impressions+=impressions; b.reach+=reach; b.visits+=visits;
+    b.hookNum+=hookNum; b.holdNum+=holdNum;
+  });
+  const adNames = Object.keys(byAd).sort((a,b) => byAd[b].spend - byAd[a].spend);
+  const rowsObjAd = {};
+  adNames.forEach(ad => {
+    const b = byAd[ad];
+    const r = deriveDay(b);
+    r.status = DATA.adStatus ? DATA.adStatus[ad] : null;
+    r.hook_rate = b.impressions ? b.hookNum / b.impressions * 100 : 0;
+    r.hold_rate = b.hookNum ? b.holdNum / b.hookNum * 100 : 0;
+    r.dest = DATA.adMeta && DATA.adMeta[ad] ? DATA.adMeta[ad].destination_url : '';
+    r.thumb = DATA.adMeta && DATA.adMeta[ad] ? DATA.adMeta[ad].thumbnail_url : '';
+    rowsObjAd[ad] = r;
+  });
+  const grandTotalAd = Object.values(byAd).reduce((acc,b) => {
+    acc.spend+=b.spend; acc.revenue+=b.revenue; acc.purchases+=b.purchases; acc.leads+=b.leads;
+    acc.outbound+=b.outbound; acc.impressions+=b.impressions; acc.reach+=b.reach; acc.visits+=b.visits;
+    acc.hookNum+=b.hookNum; acc.holdNum+=b.holdNum;
+    return acc;
+  }, {spend:0, revenue:0, purchases:0, leads:0, outbound:0, impressions:0, reach:0, visits:0, hookNum:0, holdNum:0});
+  const totalAdRow = deriveDay(grandTotalAd);
+  totalAdRow.hook_rate = grandTotalAd.impressions ? grandTotalAd.hookNum / grandTotalAd.impressions * 100 : 0;
+  totalAdRow.hold_rate = grandTotalAd.hookNum ? grandTotalAd.holdNum / grandTotalAd.hookNum * 100 : 0;
+  rowsObjAd["Total"] = totalAdRow;
+
+  if (adNames.length === 0) {
+    document.getElementById('data-table-camp-ad').innerHTML = '<tbody><tr><td style="padding:16px;color:var(--text-muted);">Sin datos para este periodo/selección.</td></tr></tbody>';
+  } else {
+    buildCampaignsTable('data-table-camp-ad', rowsObjAd, adNames, 'Anuncio', {
+      cols: adCols,
+      nameCellFn: (lab, r) => `<div class="creative-cell">${r && r.thumb ? `<img class="creative-thumb" src="${r.thumb}" alt="">` : '<div class="creative-thumb"></div>'}<span>${lab}</span></div>`,
+    });
+  }
+  document.getElementById('camp-period-label-ad').textContent = '(' + fmtDate(from) + ' — ' + fmtDate(to) + ')';
+}
+
+buildCampMultiselect();
+document.getElementById('camp-date-from').value = DATA.period_from;
+document.getElementById('camp-date-to').value = LAST_DATE_ISO;
+try { renderCampaignsTable(); } catch(e) { console.error('Fallo en: Meta campañas (init)', e); }
+
+/* ============ LANDINGS TAB (desglose por URL de destino) ============ */
+/* Clasificación por prioridad (las URLs se solapan):
+   1) go.foodforjoe...            -> Landings (todos los "pains" agregados juntos)
+   2) foodforjoe.es/quiz...       -> Quiz
+   3) www.foodforjoe.es (raíz)    -> Home
+   4) cualquier otra cosa / vacío -> Otros (tienda, sorteos, sin URL registrada) */
+function classifyDestUrl(url) {
+  const u = (url || '').toLowerCase();
+  if (!u) return 'Otros';
+  if (u.includes('go.foodforjoe')) return 'Landings';
+  if (u.includes('foodforjoe.es/quiz')) return 'Quiz';
+  if (u.includes('www.foodforjoe.es')) return 'Home';
+  return 'Otros';
+}
+const LAND_GROUPS = ['Home', 'Quiz', 'Landings', 'Otros'];
+
+function onLandDatePresetChange() {
+  const preset = document.getElementById('land-date-preset').value;
+  document.getElementById('land-custom-range').style.display = preset === 'custom' ? 'flex' : 'none';
+  renderLandingsTable();
+}
+function onLandTypeChange() { renderLandingsTable(); }
+
+function renderLandingsTable() {
+  const preset = document.getElementById('land-date-preset').value;
+  let range = resolveCampDateRange(preset);
+  if (!range) {
+    const from = document.getElementById('land-date-from').value;
+    const to = document.getElementById('land-date-to').value;
+    if (!from || !to) return;
+    range = [from, to];
+  }
+  const [from, to] = range;
+  const typeFilter = document.getElementById('land-type').value;
+
+  const byGroup = {};
+  LAND_GROUPS.forEach(g => { byGroup[g] = emptyAggJs(); });
+  (DATA.adsRaw || []).forEach(r => {
+    const [date, campaign, adset, ad, spend, revenue, purchases, leads, outbound, impressions, reach, visits] = r;
+    if (date < from || date > to) return;
+    if (typeFilter !== 'all' && campaignType[campaign] !== typeFilter) return;
+    const dest = DATA.adMeta && DATA.adMeta[ad] ? DATA.adMeta[ad].destination_url : '';
+    const group = classifyDestUrl(dest);
+    const b = byGroup[group];
+    b.spend+=spend; b.revenue+=revenue; b.purchases+=purchases; b.leads+=leads;
+    b.outbound+=outbound; b.impressions+=impressions; b.reach+=reach; b.visits+=visits;
+  });
+
+  const rowsObj = {};
+  const total = emptyAggJs();
+  LAND_GROUPS.forEach(g => { rowsObj[g] = deriveDay(byGroup[g]); sumAggJs(total, byGroup[g]); });
+  rowsObj['Total'] = deriveDay(total);
+
+  buildTable('data-table-land', rowsObj, LAND_GROUPS, 'Destino');
+  document.getElementById('land-period-label').textContent = '(' + fmtDate(from) + ' — ' + fmtDate(to) + ')';
+}
+
+document.getElementById('land-date-from').value = DATA.period_from;
+document.getElementById('land-date-to').value = LAST_DATE_ISO;
+try { renderLandingsTable(); } catch(e) { console.error('Fallo en: Meta landings (init)', e); }
+
+/* ============ COMPARATIVA 2025 TAB ============ */
+const comparisonDirections = {
+  spend:'neutral', roas:'up_good', revenue:'up_good', leads:'up_good', purchases:'up_good',
+  cpm:'down_good', cpc:'down_good', ctr:'up_good', cr_lead:'up_good', cr_purchase:'up_good',
+  cpl:'down_good', cpa:'down_good', visits:'up_good', frequency:'neutral', aov:'up_good'
+};
+function deltaCell(curr, prev, direction) {
+  if (!isFinite(curr) || !isFinite(prev) || prev === 0) return '<td>—</td>';
+  const pct = (curr - prev) / prev * 100;
+  const sign = pct > 0 ? '+' : '';
+  let colorVar = 'var(--text-muted)';
+  if (direction === 'up_good') colorVar = pct >= 0 ? 'var(--delta-good)' : 'var(--delta-bad)';
+  else if (direction === 'down_good') colorVar = pct <= 0 ? 'var(--delta-good)' : 'var(--delta-bad)';
+  return `<td style="color:${colorVar};font-weight:600">${sign}${fmtNum2(pct)} %</td>`;
+}
+function shiftYear(iso, deltaYears) {
+  const d = new Date(iso + 'T00:00:00');
+  d.setFullYear(d.getFullYear() + deltaYears);
+  return isoDate(d);
+}
+function aggregateRawRange(rawArr, from, to) {
+  const acc = {spend:0, revenue:0, purchases:0, leads:0, outbound:0, impressions:0, reach:0, visits:0};
+  rawArr.forEach(d => {
+    if (d.date < from || d.date > to) return;
+    acc.spend += d.spend; acc.revenue += d.revenue; acc.purchases += d.purchases; acc.leads += d.leads;
+    acc.outbound += d.outbound; acc.impressions += d.impressions; acc.reach += d.reach; acc.visits += d.visits;
+  });
+  return acc;
+}
+function buildComparisonTable(tableId, labelCurr, rowCurr, labelPrev, rowPrev) {
+  const table = document.getElementById(tableId);
+  let thead = '<thead><tr><th>Periodo</th>' + cols.map(c=>`<th>${c.label}</th>`).join('') + '</tr></thead>';
+  let tbody = '<tbody>';
+  tbody += `<tr><td class="month-cell">${labelCurr}</td>` + cols.map(c=>`<td>${c.fmt(rowCurr[c.key])}</td>`).join('') + '</tr>';
+  tbody += `<tr><td class="month-cell">${labelPrev}</td>` + cols.map(c=>`<td>${c.fmt(rowPrev[c.key])}</td>`).join('') + '</tr>';
+  tbody += `<tr class="total-row"><td class="month-cell">Variación</td>` + cols.map(c=>deltaCell(rowCurr[c.key], rowPrev[c.key], comparisonDirections[c.key])).join('') + '</tr>';
+  tbody += '</tbody>';
+  table.innerHTML = thead + tbody;
+}
+function onCmpDatePresetChange() {
+  const preset = document.getElementById('cmp-date-preset').value;
+  document.getElementById('cmp-custom-range').style.display = preset === 'custom' ? 'flex' : 'none';
+  renderComparativaTable();
+}
+function renderComparativaTable() {
+  const preset = document.getElementById('cmp-date-preset').value;
+  let range = resolveCampDateRange(preset);
+  if (!range) {
+    const from = document.getElementById('cmp-date-from').value;
+    const to = document.getElementById('cmp-date-to').value;
+    if (!from || !to) return;
+    range = [from, to];
+  }
+  const [from, to] = range;
+  const prevFrom = shiftYear(from, -1);
+  const prevTo = shiftYear(to, -1);
+
+  const currAgg = aggregateRawRange(DATA.dailyRaw, from, to);
+  const prevAgg = aggregateRawRange(DATA.dailyRaw2025, prevFrom, prevTo);
+  const rowCurr = deriveDay(currAgg);
+  const rowPrev = deriveDay(prevAgg);
+
+  buildComparisonTable('data-table-cmp',
+    '2026 (' + fmtDate(from) + ' — ' + fmtDate(to) + ')', rowCurr,
+    '2025 (' + fmtDate(prevFrom) + ' — ' + fmtDate(prevTo) + ')', rowPrev
+  );
+  document.getElementById('cmp-period-label').textContent = '';
+}
+document.getElementById('cmp-date-from').value = DATA.period_from;
+document.getElementById('cmp-date-to').value = LAST_DATE_ISO;
+try { renderComparativaTable(); } catch(e) { console.error('Fallo en: Meta comparativa 2025 (init)', e); }
+
+
+
+/* ============ INSIGHTS TAB (semana pasada) ============ */
+function pctDelta(curr, prev) {
+  if (!isFinite(curr) || !isFinite(prev) || prev === 0) return null;
+  return (curr - prev) / prev * 100;
+}
+function fmtPctSigned(pct) {
+  if (pct === null || !isFinite(pct)) return 'sin datos comparables';
+  const sign = pct > 0 ? '+' : '';
+  return sign + fmtNum2(pct) + ' %';
+}
+function trendPhrase(pct) {
+  if (pct === null || !isFinite(pct)) return 'no tiene comparativa fiable (sin inversión la semana anterior)';
+  const abs = Math.abs(pct);
+  const dir = pct >= 0 ? 'subió' : 'bajó';
+  const magnitude = abs < 5 ? 'ligeramente' : abs < 20 ? 'moderadamente' : 'con fuerza';
+  return dir + ' ' + magnitude + ' (' + fmtPctSigned(pct) + ')';
+}
+function colorForPct(pct, goodUp) {
+  if (pct === null || !isFinite(pct)) return 'var(--text-muted)';
+  const good = goodUp ? pct >= 0 : pct <= 0;
+  return good ? 'var(--delta-good)' : 'var(--delta-bad)';
+}
+function spanPct(pct, goodUp) {
+  return `<span style="color:${colorForPct(pct, goodUp)};font-weight:600">${fmtPctSigned(pct)}</span>`;
+}
+function aggregateCampaignsByType(from, to, type) {
+  const acc = {spend:0, revenue:0, purchases:0, leads:0, outbound:0, impressions:0, reach:0, visits:0};
+  DATA.campaignsRaw.forEach(r => {
+    const [date, campaign, spend, revenue, purchases, leads, outbound, impressions, reach, visits] = r;
+    if (date < from || date > to) return;
+    if (campaignType[campaign] !== type) return;
+    acc.spend+=spend; acc.revenue+=revenue; acc.purchases+=purchases; acc.leads+=leads;
+    acc.outbound+=outbound; acc.impressions+=impressions; acc.reach+=reach; acc.visits+=visits;
+  });
+  return acc;
+}
+
+function buildAccountInsights(curr, prev, from, to, prevFrom, prevTo) {
+  const items = [];
+  const spendPct = pctDelta(curr.spend, prev.spend);
+  const roasPct = pctDelta(curr.roas, prev.roas);
+  const purchPct = pctDelta(curr.purchases, prev.purchases);
+  const leadsPct = pctDelta(curr.leads, prev.leads);
+  const cpaPct = pctDelta(curr.cpa, prev.cpa);
+  const cplPct = pctDelta(curr.cpl, prev.cpl);
+
+  items.push(`La inversión total ${trendPhrase(spendPct)} hasta <strong>${fmtEUR(curr.spend)}</strong> frente a los ${fmtEUR(prev.spend)} de la semana anterior.`);
+  items.push(`El ROAS global fue de <strong>${fmtNum2(curr.roas)}</strong>, ${roasPct === null ? 'sin comparativa fiable' : (roasPct >= 0 ? 'una mejora' : 'una caída') + ' de ' + spanPct(roasPct, true) + ' respecto a la semana previa (' + fmtNum2(prev.roas) + ')'}.`);
+  items.push(`Se generaron <strong>${fmtNum(curr.purchases)}</strong> compras (${spanPct(purchPct, true)}) y <strong>${fmtNum(curr.leads)}</strong> leads (${spanPct(leadsPct, true)}) en la cuenta.`);
+  items.push(`La eficiencia de coste se movió a <strong>${fmtEUR2(curr.cpa)}</strong> de CPA (${spanPct(cpaPct, false)}) y <strong>${fmtEUR2(curr.cpl)}</strong> de CPL (${spanPct(cplPct, false)}).`);
+
+  return items;
+}
+
+const typeMeta = {
+  'Ecommerce': {focus: 'compras y ROAS, al ser tráfico orientado a la venta directa en la tienda'},
+  'Suscripción': {focus: 'compras (altas de suscripción/trial) y CPA, la métrica clave del funnel de suscripción'},
+  'Leads': {focus: 'leads generados y CPL, ya que el objetivo de estas campañas es captar el formulario, no la venta directa'},
+};
+
+function buildTypeInsights(type, curr, prev) {
+  const items = [];
+  if (curr.spend === 0 && prev.spend === 0) {
+    return [`No ha habido inversión en campañas de tipo <strong>${type}</strong> ni esta semana ni la anterior.`];
+  }
+  const spendPct = pctDelta(curr.spend, prev.spend);
+  const roasPct = pctDelta(curr.roas, prev.roas);
+  const purchPct = pctDelta(curr.purchases, prev.purchases);
+  const leadsPct = pctDelta(curr.leads, prev.leads);
+  const cpaPct = pctDelta(curr.cpa, prev.cpa);
+  const cplPct = pctDelta(curr.cpl, prev.cpl);
+
+  const spendPctStr = spendPct === null ? 'sin datos comparables' : `<span style="color:var(--text-muted);font-weight:600">${fmtPctSigned(spendPct)}</span>`;
+  items.push(`Inversión de <strong>${fmtEUR(curr.spend)}</strong> (${spendPctStr}) — se centra en ${typeMeta[type].focus}.`);
+  if (type === 'Leads') {
+    items.push(`Leads: <strong>${fmtNum(curr.leads)}</strong> (${spanPct(leadsPct, true)}) a un CPL de <strong>${fmtEUR2(curr.cpl)}</strong> (${spanPct(cplPct, false)}).`);
+    items.push(`CR Lead (leads / clics salientes): <strong>${fmtPct(curr.cr_lead)}</strong> frente al ${fmtPct(prev.cr_lead)} de la semana anterior.`);
+  } else {
+    items.push(`Compras: <strong>${fmtNum(curr.purchases)}</strong> (${spanPct(purchPct, true)}) con un ROAS de <strong>${fmtNum2(curr.roas)}</strong> (${spanPct(roasPct, true)}).`);
+    items.push(`CPA de <strong>${fmtEUR2(curr.cpa)}</strong> (${spanPct(cpaPct, false)}) y AOV de <strong>${fmtEUR2(curr.aov)}</strong>.`);
+  }
+  return items;
+}
+
+function renderList(id, items) {
+  const el = document.getElementById(id);
+  if (!items.length) { el.innerHTML = '<li class="insights-empty">Sin datos suficientes para esta semana.</li>'; return; }
+  el.innerHTML = items.map(t => `<li>${t}</li>`).join('');
+}
+
+function renderInsights() {
+  const curRange = resolveCampDateRange('last7');
+  const [from, to] = curRange;
+  const prevFrom = isoDate(addDays(new Date(from + 'T00:00:00'), -7));
+  const prevTo = isoDate(addDays(new Date(to + 'T00:00:00'), -7));
+
+  const accCurr = deriveDay(aggregateRawRange(DATA.dailyRaw, from, to));
+  const accPrev = deriveDay(aggregateRawRange(DATA.dailyRaw, prevFrom, prevTo));
+  const accountItems = buildAccountInsights(accCurr, accPrev, from, to, prevFrom, prevTo);
+
+  // Cross-type ROAS comparison for a closing takeaway
+  const types = ['Ecommerce', 'Suscripción', 'Leads'];
+  const typeRows = {};
+  types.forEach(t => {
+    typeRows[t] = {
+      curr: deriveDay(aggregateCampaignsByType(from, to, t)),
+      prev: deriveDay(aggregateCampaignsByType(prevFrom, prevTo, t)),
+    };
+  });
+  const roasMovers = types
+    .map(t => ({t, pct: pctDelta(typeRows[t].curr.roas, typeRows[t].prev.roas), spend: typeRows[t].curr.spend}))
+    .filter(m => m.pct !== null && m.spend > 0);
+  if (roasMovers.length >= 2) {
+    roasMovers.sort((a,b) => b.pct - a.pct);
+    const best = roasMovers[0], worst = roasMovers[roasMovers.length - 1];
+    if (best.t !== worst.t) {
+      const bestVerb = best.pct >= 0 ? 'mejor evolución' : 'la caída más contenida';
+      const worstVerb = worst.pct >= 0 ? 'la subida más discreta' : 'el mayor retroceso';
+      accountItems.push(`Por tipología, <strong>${best.t}</strong> tuvo ${bestVerb} de ROAS esta semana (${spanPct(best.pct, true)}), mientras que <strong>${worst.t}</strong> tuvo ${worstVerb} (${spanPct(worst.pct, true)}).`);
+    }
+  }
+  renderList('ins-account', accountItems);
+  document.getElementById('ins-period-label').textContent = '(' + fmtDate(from) + ' — ' + fmtDate(to) + ' vs. ' + fmtDate(prevFrom) + ' — ' + fmtDate(prevTo) + ')';
+
+  const labelIds = {'Ecommerce': 'ins-period-label-ecom', 'Suscripción': 'ins-period-label-susc', 'Leads': 'ins-period-label-leads'};
+  const listIds = {'Ecommerce': 'ins-ecommerce', 'Suscripción': 'ins-suscripcion', 'Leads': 'ins-leads'};
+  types.forEach(t => {
+    const items = buildTypeInsights(t, typeRows[t].curr, typeRows[t].prev);
+    renderList(listIds[t], items);
+    document.getElementById(labelIds[t]).textContent = '(' + fmtDate(from) + ' — ' + fmtDate(to) + ')';
+  });
+}
+try { renderInsights(); } catch(e) { console.error('Fallo en: Meta insights', e); }
+
+
+/* ================================================================ */
+/* ============ TIKTOK ADS — DATA & WIRING (mirrors Meta) ========= */
+/* ================================================================ */
+
+
+
+document.getElementById('period-label-tt') && (document.getElementById('period-label-tt').textContent = '(1 enero ' + new Date(DATA_TT.period_from).getFullYear() + ' — ' + fmtDate(DATA_TT.period_to) + ')');
+
+/* Se registra el tipo de campaña de TikTok ya aquí (antes se hacía más abajo, junto a la
+   pestaña Campañas) porque el filtro compartido Mensual/Semanal/Diario de TikTok lo necesita
+   antes de renderizar por primera vez. */
+DATA_TT.campaignsList.forEach(c => { if (!(c in campaignType)) campaignType[c] = classifyCampaign(c); });
+
+/* ---- Stat tiles ---- */
+const last7Tt = DATA_TT.last7d, prev7Tt = DATA_TT.prev7d;
+function aggByTypeAndRangeTt(type, from, to) {
+  const acc = emptyAggJs();
+  DATA_TT.campaignsRaw.forEach(r => {
+    if (r[0] < from || r[0] > to) return;
+    if (campaignType[r[1]] !== type) return;
+    addAggJs(acc, r);
+  });
+  return acc;
+}
+function renderMainStatRowTt() {
+  const filter = globalCampTypeFilterTt;
+  const last7Data = filter === 'all' ? last7Tt : deriveDay(aggByTypeAndRangeTt(filter, last7Tt.from, last7Tt.to));
+  const prev7Data = filter === 'all' ? prev7Tt : deriveDay(aggByTypeAndRangeTt(filter, prev7Tt.from, prev7Tt.to));
+  const stats = statDefs.map(s => ({
+    label: s.label,
+    value: s.fmt(last7Data[s.key]),
+    delta: deltaBadge(last7Data[s.key], prev7Data[s.key], s.direction),
+  }));
+  document.getElementById('stat-row-tt').innerHTML = stats.map(s =>
+    `<div class="stat-tile"><div class="label">${s.label}</div><div class="value">${s.value}</div>${s.delta}</div>`
+  ).join('');
+  const typeLabel = filter === 'all' ? '' : ' · Solo campañas de ' + filter;
+  document.getElementById('stat-period-label-tt').textContent =
+    fmtDate(last7Tt.from) + ' – ' + fmtDate(last7Tt.to) + ' vs. periodo anterior (' + fmtDate(prev7Tt.from) + ' – ' + fmtDate(prev7Tt.to) + ')' + typeLabel;
+}
+
+/* ---- Daily tab: last 30 days up to yesterday (agregados sin filtrar, el filtro se aplica al renderizar) ---- */
+const last30RawTt = DATA_TT.dailyRaw.slice(-30);
+const daysTt_ = last30RawTt.map(d => dayLabel(d.date));
+const dailyRowsTt = {};
+last30RawTt.forEach((d,i) => { dailyRowsTt[daysTt_[i]] = deriveDay(d); });
+const daily30TotalsTt = last30RawTt.reduce((acc,d) => {
+  acc.spend+=d.spend; acc.revenue+=d.revenue; acc.purchases+=d.purchases; acc.leads+=d.leads;
+  acc.outbound+=d.outbound; acc.impressions+=d.impressions; acc.reach+=d.reach; acc.visits+=d.visits;
+  return acc;
+}, {spend:0, revenue:0, purchases:0, leads:0, outbound:0, impressions:0, reach:0, visits:0});
+dailyRowsTt["Total"] = deriveDay(daily30TotalsTt);
+
+/* ---- Tabs ---- */
+const TABS_TT = ['mensual', 'semanal', 'diario', 'campanas', 'comparativa', 'insights'];
+function switchTabTt(tab) {
+  TABS_TT.forEach(t => {
+    document.getElementById('tab-' + t + '-tt').style.display = (t === tab) ? '' : 'none';
+  });
+  document.querySelectorAll('#tab-bar-tt .tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-tab') === tab);
+  });
+}
+window.switchTabTt = switchTabTt;
+
+/* ---- Monthly charts ---- */
+function drawMensualChartsTt(rowsObj) {
+  const monthsL = DATA_TT.months;
+  const get = (key) => monthsL.map(m => rowsObj[m][key]);
+  drawBarChart('chart-spend-tt', get('spend'), monthsL, fmtEUR);
+  drawLineChart('chart-roas-tt', get('roas'), monthsL, fmtNum2);
+  drawBarChart('chart-purchases-tt', get('purchases'), monthsL, fmtNum);
+  drawLineChart('chart-cpa-tt', get('cpa'), monthsL, fmtEUR2);
+  drawBarChart('chart-leads-tt', get('leads'), monthsL, fmtNum);
+  drawLineChart('chart-cpl-tt', get('cpl'), monthsL, fmtEUR2);
+  drawBarChart('chart-frequency-tt', get('frequency'), monthsL, fmtNum2);
+  drawMultiLineChart('chart-ctrcr-leads-tt', 'legend-ctrcr-leads-tt', [
+    {name:'CTR', values: get('ctr'), color: 'var(--series-ctr)'},
+    {name:'CR Lead', values: get('cr_lead'), color: 'var(--series-crlead)'},
+  ], monthsL, fmtPct);
+  drawMultiLineChart('chart-ctrcr-purchases-tt', 'legend-ctrcr-purchases-tt', [
+    {name:'CTR', values: get('ctr'), color: 'var(--series-ctr)'},
+    {name:'CR Compra', values: get('cr_purchase'), color: 'var(--series-crpurch)'},
+  ], monthsL, fmtPct);
+}
+
+/* ---- Weekly charts ---- */
+function drawSemanalChartsTt(rowsObj) {
+  const weeksL = DATA_TT.weekly.labels;
+  const getW = (key) => weeksL.map(w => rowsObj[w][key]);
+  drawBarChart('chart-spend-w-tt', getW('spend'), weeksL, fmtEUR);
+  drawLineChart('chart-roas-w-tt', getW('roas'), weeksL, fmtNum2);
+  drawBarChart('chart-purchases-w-tt', getW('purchases'), weeksL, fmtNum);
+  drawLineChart('chart-cpa-w-tt', getW('cpa'), weeksL, fmtEUR2);
+  drawBarChart('chart-leads-w-tt', getW('leads'), weeksL, fmtNum);
+  drawLineChart('chart-cpl-w-tt', getW('cpl'), weeksL, fmtEUR2);
+  drawBarChart('chart-frequency-w-tt', getW('frequency'), weeksL, fmtNum2);
+  drawMultiLineChart('chart-ctrcr-leads-w-tt', 'legend-ctrcr-leads-w-tt', [
+    {name:'CTR', values: getW('ctr'), color: 'var(--series-ctr)'},
+    {name:'CR Lead', values: getW('cr_lead'), color: 'var(--series-crlead)'},
+  ], weeksL, fmtPct);
+  drawMultiLineChart('chart-ctrcr-purchases-w-tt', 'legend-ctrcr-purchases-w-tt', [
+    {name:'CTR', values: getW('ctr'), color: 'var(--series-ctr)'},
+    {name:'CR Compra', values: getW('cr_purchase'), color: 'var(--series-crpurch)'},
+  ], weeksL, fmtPct);
+}
+
+/* ---- Daily charts (last 30 days) ---- */
+function drawDiarioChartsTt(rowsObj, labelsL) {
+  const getD = (key) => labelsL.map(d => rowsObj[d][key]);
+  const width = Math.max(520, labelsL.length * 46);
+  drawBarChart('chart-spend-d-tt', getD('spend'), labelsL, fmtEUR, width);
+  drawLineChart('chart-roas-d-tt', getD('roas'), labelsL, fmtNum2, width);
+  drawBarChart('chart-purchases-d-tt', getD('purchases'), labelsL, fmtNum, width);
+  drawLineChart('chart-cpa-d-tt', getD('cpa'), labelsL, fmtEUR2, width);
+  drawBarChart('chart-leads-d-tt', getD('leads'), labelsL, fmtNum, width);
+  drawLineChart('chart-cpl-d-tt', getD('cpl'), labelsL, fmtEUR2, width);
+  drawBarChart('chart-frequency-d-tt', getD('frequency'), labelsL, fmtNum2, width);
+  drawMultiLineChart('chart-ctrcr-leads-d-tt', 'legend-ctrcr-leads-d-tt', [
+    {name:'CTR', values: getD('ctr'), color: 'var(--series-ctr)'},
+    {name:'CR Lead', values: getD('cr_lead'), color: 'var(--series-crlead)'},
+  ], labelsL, fmtPct, width);
+  drawMultiLineChart('chart-ctrcr-purchases-d-tt', 'legend-ctrcr-purchases-d-tt', [
+    {name:'CTR', values: getD('ctr'), color: 'var(--series-ctr)'},
+    {name:'CR Compra', values: getD('cr_purchase'), color: 'var(--series-crpurch)'},
+  ], labelsL, fmtPct, width);
+}
+
+/* ============ FILTRO "TIPO DE CAMPAÑA" compartido entre resumen/Mensual/Semanal/Diario (TikTok) ============ */
+let globalCampTypeFilterTt = 'all'; // compartido con Mensual/Semanal/Diario TikTok y el resumen de KPIs de esa plataforma
+
+function renderMensualTableTt() {
+  const rowsObj = globalCampTypeFilterTt === 'all' ? DATA_TT.rows : computeFilteredMonthlyRowsTt();
+  buildTable('data-table-tt', rowsObj, DATA_TT.months, 'Mes');
+  drawMensualChartsTt(rowsObj);
+}
+function computeFilteredMonthlyRowsTt() {
+  const byMonth = {};
+  DATA_TT.campaignsRaw.forEach(r => {
+    if (campaignType[r[1]] !== globalCampTypeFilterTt) return;
+    const m = monthLabelFor(r[0]);
+    if (!byMonth[m]) byMonth[m] = emptyAggJs();
+    addAggJs(byMonth[m], r);
+  });
+  const rowsObj = {};
+  const total = emptyAggJs();
+  DATA_TT.months.forEach(m => { const b = byMonth[m] || emptyAggJs(); rowsObj[m] = deriveDay(b); sumAggJs(total, b); });
+  rowsObj['Total'] = deriveDay(total);
+  return rowsObj;
+}
+
+function renderSemanalTableTt() {
+  const rowsObj = globalCampTypeFilterTt === 'all' ? DATA_TT.weekly.rows : computeFilteredWeeklyRowsTt();
+  buildTable('data-table-w-tt', rowsObj, DATA_TT.weekly.labels, 'Semana');
+  drawSemanalChartsTt(rowsObj);
+}
+function computeFilteredWeeklyRowsTt() {
+  const byWeek = {};
+  DATA_TT.campaignsRaw.forEach(r => {
+    if (campaignType[r[1]] !== globalCampTypeFilterTt) return;
+    const w = weekLabelFor(r[0]);
+    if (!byWeek[w]) byWeek[w] = emptyAggJs();
+    addAggJs(byWeek[w], r);
+  });
+  const rowsObj = {};
+  const total = emptyAggJs();
+  DATA_TT.weekly.labels.forEach(w => { const b = byWeek[w] || emptyAggJs(); rowsObj[w] = deriveDay(b); sumAggJs(total, b); });
+  rowsObj['Total'] = deriveDay(total);
+  return rowsObj;
+}
+
+function renderDiarioTableTt() {
+  if (globalCampTypeFilterTt === 'all') {
+    buildTable('data-table-d-tt', dailyRowsTt, daysTt_, 'Día');
+    drawDiarioChartsTt(dailyRowsTt, daysTt_);
+    document.getElementById('period-label-d-tt').textContent = last30RawTt.length
+      ? '(' + fmtDate(last30RawTt[0].date) + ' — ' + fmtDate(last30RawTt[last30RawTt.length-1].date) + ')'
+      : '(sin datos diarios)';
+    return;
+  }
+  const datesLast30 = last30RawTt.map(d => d.date);
+  const byDate = {};
+  datesLast30.forEach(d => { byDate[d] = emptyAggJs(); });
+  DATA_TT.campaignsRaw.forEach(r => {
+    if (!(r[0] in byDate)) return;
+    if (campaignType[r[1]] !== globalCampTypeFilterTt) return;
+    addAggJs(byDate[r[0]], r);
+  });
+  const labels = datesLast30.map(dayLabel);
+  const rowsObj = {};
+  const total = emptyAggJs();
+  datesLast30.forEach((d,i) => { rowsObj[labels[i]] = deriveDay(byDate[d]); sumAggJs(total, byDate[d]); });
+  rowsObj['Total'] = deriveDay(total);
+  buildTable('data-table-d-tt', rowsObj, labels, 'Día');
+  drawDiarioChartsTt(rowsObj, labels);
+  document.getElementById('period-label-d-tt').textContent = datesLast30.length
+    ? '(' + fmtDate(datesLast30[0]) + ' — ' + fmtDate(datesLast30[datesLast30.length-1]) + ')'
+    : '(sin datos diarios)';
+}
+
+function onGlobalTypeFilterChangeTt(val) {
+  globalCampTypeFilterTt = val;
+  ['mensual-type-filter-tt','semanal-type-filter-tt','diario-type-filter-tt'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = val;
+  });
+  try { renderMensualTableTt(); } catch(e) { console.error('Fallo en: TikTok mensual (filtro tipo)', e); }
+  try { renderSemanalTableTt(); } catch(e) { console.error('Fallo en: TikTok semanal (filtro tipo)', e); }
+  try { renderDiarioTableTt(); } catch(e) { console.error('Fallo en: TikTok diario (filtro tipo)', e); }
+  try { renderMainStatRowTt(); } catch(e) { console.error('Fallo en: stat tiles TikTok (filtro tipo)', e); }
+}
+window.onGlobalTypeFilterChangeTt = onGlobalTypeFilterChangeTt;
+
+try { renderMainStatRowTt(); } catch(e) { console.error('Fallo en: stat tiles TikTok', e); }
+try { renderMensualTableTt(); } catch(e) { console.error('Fallo en: TikTok mensual', e); }
+try { renderSemanalTableTt(); } catch(e) { console.error('Fallo en: TikTok semanal', e); }
+document.getElementById('period-label-w-tt').textContent = document.getElementById('period-label-tt').textContent;
+try { renderDiarioTableTt(); } catch(e) { console.error('Fallo en: TikTok diario', e); }
+
+/* ---- Campaigns tab (TikTok) ---- */
+const LAST_DATE_ISO_TT = DATA_TT.campaignsRaw.length
+  ? DATA_TT.campaignsRaw.reduce((max,r) => r[0] > max ? r[0] : max, DATA_TT.campaignsRaw[0][0])
+  : DATA_TT.period_to;
+const LAST_DATE_TT = new Date(LAST_DATE_ISO_TT + 'T00:00:00');
+
+const campSelectedTt = new Set();
+let campMultiselectOpenTt = false;
+
+function resolveDateRangeGeneric(preset, lastDate, periodFrom) {
+  const y = lastDate;
+  if (preset === 'today') return [isoDate(y), isoDate(y)];
+  if (preset === 'yesterday') return [isoDate(addDays(y,-1)), isoDate(addDays(y,-1))];
+  if (preset === 'last7') return [isoDate(addDays(y,-6)), isoDate(y)];
+  if (preset === 'last30') return [isoDate(addDays(y,-29)), isoDate(y)];
+  if (preset === 'thismonth') return [isoDate(new Date(y.getFullYear(), y.getMonth(), 1)), isoDate(y)];
+  if (preset === 'lastmonth') {
+    const firstThis = new Date(y.getFullYear(), y.getMonth(), 1);
+    const lastPrev = addDays(firstThis, -1);
+    const firstPrev = new Date(lastPrev.getFullYear(), lastPrev.getMonth(), 1);
+    return [isoDate(firstPrev), isoDate(lastPrev)];
+  }
+  if (preset === 'ytd') return [periodFrom, isoDate(y)];
+  return null;
+}
+function resolveCampDateRangeTt(preset) { return resolveDateRangeGeneric(preset, LAST_DATE_TT, DATA_TT.period_from); }
+
+function onCampDatePresetChangeTt() {
+  const preset = document.getElementById('camp-date-preset-tt').value;
+  document.getElementById('camp-custom-range-tt').style.display = preset === 'custom' ? 'flex' : 'none';
+  renderCampaignsTableTt();
+}
+function onCampTypeChangeTt() { renderCampaignsTableTt(); }
+function toggleCampMultiselectTt() {
+  campMultiselectOpenTt = !campMultiselectOpenTt;
+  document.getElementById('camp-multiselect-panel-tt').style.display = campMultiselectOpenTt ? 'block' : 'none';
+}
+document.addEventListener('click', (e) => {
+  if (campMultiselectOpenTt && !document.getElementById('camp-multiselect-tt').contains(e.target)) {
+    campMultiselectOpenTt = false;
+    document.getElementById('camp-multiselect-panel-tt').style.display = 'none';
+  }
+});
+function buildCampMultiselectTt() {
+  const panel = document.getElementById('camp-multiselect-panel-tt');
+  let html = `<div class="multiselect-actions"><a onclick="campSelectAllTt()">Todas</a><a onclick="campSelectNoneTt()">Ninguna</a></div>`;
+  DATA_TT.campaignsList.forEach(c => {
+    html += `<label class="multiselect-option"><input type="checkbox" value="${c.replace(/"/g,'&quot;')}" onchange="onCampCheckboxChangeTt(this)"> ${c} <span class="type-badge">${campaignType[c]}</span></label>`;
+  });
+  panel.innerHTML = html;
+}
+function onCampCheckboxChangeTt(el) {
+  if (el.checked) campSelectedTt.add(el.value); else campSelectedTt.delete(el.value);
+  updateCampMultiselectLabelTt();
+  renderCampaignsTableTt();
+}
+window.campSelectAllTt = function() {
+  campSelectedTt.clear();
+  document.querySelectorAll('#camp-multiselect-panel-tt input[type=checkbox]').forEach(cb => cb.checked = false);
+  updateCampMultiselectLabelTt();
+  renderCampaignsTableTt();
+};
+window.campSelectNoneTt = function() {
+  campSelectedTt.clear();
+  document.querySelectorAll('#camp-multiselect-panel-tt input[type=checkbox]').forEach(cb => { cb.checked = true; campSelectedTt.add(cb.value); });
+  updateCampMultiselectLabelTt();
+  renderCampaignsTableTt();
+};
+function updateCampMultiselectLabelTt() {
+  const btn = document.getElementById('camp-multiselect-btn-tt');
+  if (campSelectedTt.size === 0) btn.textContent = 'Todas las campañas';
+  else if (campSelectedTt.size === 1) btn.textContent = [...campSelectedTt][0];
+  else btn.textContent = campSelectedTt.size + ' campañas seleccionadas';
+}
+function renderCampaignsTableTt() {
+  const preset = document.getElementById('camp-date-preset-tt').value;
+  let range = resolveCampDateRangeTt(preset);
+  if (!range) {
+    const from = document.getElementById('camp-date-from-tt').value;
+    const to = document.getElementById('camp-date-to-tt').value;
+    if (!from || !to) return;
+    range = [from, to];
+  }
+  const [from, to] = range;
+  const typeFilter = document.getElementById('camp-type-tt').value;
+  const byCampaign = {};
+  DATA_TT.campaignsRaw.forEach(r => {
+    const [date, campaign, spend, revenue, purchases, leads, outbound, impressions, reach, visits] = r;
+    if (date < from || date > to) return;
+    if (campSelectedTt.size > 0 && !campSelectedTt.has(campaign)) return;
+    if (typeFilter !== 'all' && campaignType[campaign] !== typeFilter) return;
+    if (!byCampaign[campaign]) byCampaign[campaign] = {spend:0, revenue:0, purchases:0, leads:0, outbound:0, impressions:0, reach:0, visits:0};
+    const b = byCampaign[campaign];
+    b.spend+=spend; b.revenue+=revenue; b.purchases+=purchases; b.leads+=leads;
+    b.outbound+=outbound; b.impressions+=impressions; b.reach+=reach; b.visits+=visits;
+  });
+  const campaignNames = Object.keys(byCampaign).sort((a,b) => byCampaign[b].spend - byCampaign[a].spend);
+  const rowsObj = {};
+  campaignNames.forEach(c => { rowsObj[c] = deriveDay(byCampaign[c]); });
+  const grandTotal = campaignNames.reduce((acc,c) => {
+    const b = byCampaign[c];
+    acc.spend+=b.spend; acc.revenue+=b.revenue; acc.purchases+=b.purchases; acc.leads+=b.leads;
+    acc.outbound+=b.outbound; acc.impressions+=b.impressions; acc.reach+=b.reach; acc.visits+=b.visits;
+    return acc;
+  }, {spend:0, revenue:0, purchases:0, leads:0, outbound:0, impressions:0, reach:0, visits:0});
+  rowsObj["Total"] = deriveDay(grandTotal);
+  if (campaignNames.length === 0) {
+    document.getElementById('data-table-camp-tt').innerHTML = '<tbody><tr><td style="padding:16px;color:var(--text-muted);">Sin datos para este periodo/selección.</td></tr></tbody>';
+  } else {
+    buildCampaignsTable('data-table-camp-tt', rowsObj, campaignNames, 'Campaña');
+  }
+  document.getElementById('camp-period-label-tt').textContent = '(' + fmtDate(from) + ' — ' + fmtDate(to) + ')';
+}
+buildCampMultiselectTt();
+document.getElementById('camp-date-from-tt').value = DATA_TT.period_from;
+document.getElementById('camp-date-to-tt').value = LAST_DATE_ISO_TT;
+try { renderCampaignsTableTt(); } catch(e) { console.error('Fallo en: TikTok campañas (init)', e); }
+
+/* ---- Comparativa 2025 tab (TikTok) ---- */
+function onCmpDatePresetChangeTt() {
+  const preset = document.getElementById('cmp-date-preset-tt').value;
+  document.getElementById('cmp-custom-range-tt').style.display = preset === 'custom' ? 'flex' : 'none';
+  renderComparativaTableTt();
+}
+function renderComparativaTableTt() {
+  const preset = document.getElementById('cmp-date-preset-tt').value;
+  let range = resolveCampDateRangeTt(preset);
+  if (!range) {
+    const from = document.getElementById('cmp-date-from-tt').value;
+    const to = document.getElementById('cmp-date-to-tt').value;
+    if (!from || !to) return;
+    range = [from, to];
+  }
+  const [from, to] = range;
+  const prevFrom = shiftYear(from, -1);
+  const prevTo = shiftYear(to, -1);
+  const currAgg = aggregateRawRange(DATA_TT.dailyRaw, from, to);
+  const prevAgg = aggregateRawRange(DATA_TT.dailyRaw2025, prevFrom, prevTo);
+  const rowCurr = deriveDay(currAgg);
+  const rowPrev = deriveDay(prevAgg);
+  buildComparisonTable('data-table-cmp-tt',
+    '2026 (' + fmtDate(from) + ' — ' + fmtDate(to) + ')', rowCurr,
+    '2025 (' + fmtDate(prevFrom) + ' — ' + fmtDate(prevTo) + ')', rowPrev
+  );
+  document.getElementById('cmp-period-label-tt').textContent = '';
+}
+document.getElementById('cmp-date-from-tt').value = DATA_TT.period_from;
+document.getElementById('cmp-date-to-tt').value = LAST_DATE_ISO_TT;
+try { renderComparativaTableTt(); } catch(e) { console.error('Fallo en: TikTok comparativa 2025 (init)', e); }
+
+/* ---- Insights tab (TikTok) ---- */
+function aggregateCampaignsByTypeTt(from, to, type) {
+  const acc = {spend:0, revenue:0, purchases:0, leads:0, outbound:0, impressions:0, reach:0, visits:0};
+  DATA_TT.campaignsRaw.forEach(r => {
+    const [date, campaign, spend, revenue, purchases, leads, outbound, impressions, reach, visits] = r;
+    if (date < from || date > to) return;
+    if (campaignType[campaign] !== type) return;
+    acc.spend+=spend; acc.revenue+=revenue; acc.purchases+=purchases; acc.leads+=leads;
+    acc.outbound+=outbound; acc.impressions+=impressions; acc.reach+=reach; acc.visits+=visits;
+  });
+  return acc;
+}
+function renderInsightsTt() {
+  const curRange = resolveCampDateRangeTt('last7');
+  const [from, to] = curRange;
+  const prevFrom = isoDate(addDays(new Date(from + 'T00:00:00'), -7));
+  const prevTo = isoDate(addDays(new Date(to + 'T00:00:00'), -7));
+  const accCurr = deriveDay(aggregateRawRange(DATA_TT.dailyRaw, from, to));
+  const accPrev = deriveDay(aggregateRawRange(DATA_TT.dailyRaw, prevFrom, prevTo));
+  const accountItems = buildAccountInsights(accCurr, accPrev, from, to, prevFrom, prevTo);
+  const types = ['Ecommerce', 'Suscripción', 'Leads'];
+  const typeRows = {};
+  types.forEach(t => {
+    typeRows[t] = {
+      curr: deriveDay(aggregateCampaignsByTypeTt(from, to, t)),
+      prev: deriveDay(aggregateCampaignsByTypeTt(prevFrom, prevTo, t)),
+    };
+  });
+  const roasMovers = types
+    .map(t => ({t, pct: pctDelta(typeRows[t].curr.roas, typeRows[t].prev.roas), spend: typeRows[t].curr.spend}))
+    .filter(m => m.pct !== null && m.spend > 0);
+  if (roasMovers.length >= 2) {
+    roasMovers.sort((a,b) => b.pct - a.pct);
+    const best = roasMovers[0], worst = roasMovers[roasMovers.length - 1];
+    if (best.t !== worst.t) {
+      const bestVerb = best.pct >= 0 ? 'mejor evolución' : 'la caída más contenida';
+      const worstVerb = worst.pct >= 0 ? 'la subida más discreta' : 'el mayor retroceso';
+      accountItems.push(`Por tipología, <strong>${best.t}</strong> tuvo ${bestVerb} de ROAS esta semana (${spanPct(best.pct, true)}), mientras que <strong>${worst.t}</strong> tuvo ${worstVerb} (${spanPct(worst.pct, true)}).`);
+    }
+  }
+  renderList('ins-account-tt', accountItems);
+  document.getElementById('ins-period-label-tt').textContent = '(' + fmtDate(from) + ' — ' + fmtDate(to) + ' vs. ' + fmtDate(prevFrom) + ' — ' + fmtDate(prevTo) + ')';
+  const labelIds = {'Ecommerce': 'ins-period-label-ecom-tt', 'Suscripción': 'ins-period-label-susc-tt', 'Leads': 'ins-period-label-leads-tt'};
+  const listIds = {'Ecommerce': 'ins-ecommerce-tt', 'Suscripción': 'ins-suscripcion-tt', 'Leads': 'ins-leads-tt'};
+  types.forEach(t => {
+    const items = buildTypeInsights(t, typeRows[t].curr, typeRows[t].prev);
+    renderList(listIds[t], items);
+    document.getElementById(labelIds[t]).textContent = '(' + fmtDate(from) + ' — ' + fmtDate(to) + ')';
+  });
+}
+try { renderInsightsTt(); } catch(e) { console.error('Fallo en: TikTok insights', e); }
+
+/* ---- Platform switcher ---- */
+function switchPlatform(p) {
+  document.getElementById('platform-meta').style.display = p === 'meta' ? '' : 'none';
+  document.getElementById('platform-tt').style.display = p === 'tiktok' ? '' : 'none';
+  document.getElementById('header-title').textContent = p === 'meta' ? 'Resultados Meta Ads — Global' : 'Resultados TikTok Ads — Global';
+  document.getElementById('header-sub').textContent = p === 'meta' ? 'Cuenta: Food for Joe · Datos vía Windsor.ai' : 'Cuenta: Ad Account FFJ · Datos vía Windsor.ai';
+  document.getElementById('update-label').textContent = 'Actualizado hasta el ' + fmtDate(p === 'meta' ? DATA.period_to : DATA_TT.period_to);
+}
+window.switchPlatform = switchPlatform;
+
+/* Exponer a window todas las funciones que los atributos onclick/onchange
+   del HTML necesitan llamar desde el ámbito global (bug pre-existente:
+   estas se quedaban encerradas dentro de este IIFE y el navegador las
+   veía como "is not defined" al interactuar con filtros de Campañas y
+   Comparativa 2025, tanto en Meta como en TikTok). */
+window.onCampCheckboxChange = onCampCheckboxChange;
+window.onCampCheckboxChangeTt = onCampCheckboxChangeTt;
+window.onCampDatePresetChange = onCampDatePresetChange;
+window.onCampDatePresetChangeTt = onCampDatePresetChangeTt;
+window.onCampTypeChange = onCampTypeChange;
+window.onCampTypeChangeTt = onCampTypeChangeTt;
+window.onCmpDatePresetChange = onCmpDatePresetChange;
+window.onCmpDatePresetChangeTt = onCmpDatePresetChangeTt;
+window.renderCampaignsTable = renderCampaignsTable;
+window.renderCampaignsTableTt = renderCampaignsTableTt;
+window.onLandDatePresetChange = onLandDatePresetChange;
+window.onLandTypeChange = onLandTypeChange;
+window.renderLandingsTable = renderLandingsTable;
+window.renderComparativaTable = renderComparativaTable;
+window.renderComparativaTableTt = renderComparativaTableTt;
+window.toggleCampMultiselect = toggleCampMultiselect;
+window.toggleCampMultiselectTt = toggleCampMultiselectTt;
+
+})();
+</script>
+</body>
+</html>
