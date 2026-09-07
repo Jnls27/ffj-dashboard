@@ -647,6 +647,14 @@
     <p class="footer-note"><strong>Home</strong> = la URL de destino es el dominio raíz www.foodforjoe.es (sin /quiz). <strong>Quiz</strong> = la URL contiene foodforjoe.es/quiz. <strong>Landings</strong> = la URL es una landing go.foodforjoe.* (se agregan todas las landings/"pains" juntas, sin desglosar por pain individual). <strong>Otros</strong> = cualquier otro destino (tienda store.foodforjoe.es, sorteos, o anuncios sin URL de destino registrada). Mismas columnas y fórmulas SUM/SUM que la tabla Mensual.</p>
   </div>
 
+  <div class="panel">
+    <h2>Desglose por landing individual <span class="period" id="land-detail-period-label"></span></h2>
+    <div class="table-scroll">
+      <table id="data-table-land-detail"></table>
+    </div>
+    <p class="footer-note">Desglosa únicamente el grupo <strong>Landings</strong> de la tabla anterior en una fila por cada landing (pain) individual de go.foodforjoe.*, agrupando URLs equivalentes con distinto querystring (p.ej. <code>?fbclid=…</code>, <code>?utm_…</code>). Usa los mismos filtros de Periodo y Tipo de campaña de arriba. La fila <strong>Total</strong> debe coincidir con la fila "Landings" de la tabla anterior.</p>
+  </div>
+
   </div><!-- /tab-landings -->
 
   <div id="tab-comparativa" class="tab-panel" style="display:none;">
@@ -1993,6 +2001,27 @@ function classifyDestUrl(url) {
 }
 const LAND_GROUPS = ['Home', 'Quiz', 'Landings', 'Otros'];
 
+/* --- Desglose de "Landings" en pains individuales ---
+   Normaliza la destination_url (quita protocolo, querystring y barra final) y usa
+   el path tras el dominio como clave de agrupación, para que la misma landing con
+   distinto ?fbclid=... / ?utm_... no se duplique en filas distintas. */
+function normalizeLandingUrl(url) {
+  let u = (url || '').toLowerCase();
+  u = u.replace(/^https?:\/\//, '');
+  u = u.split('?')[0];
+  u = u.replace(/\/+$/, '');
+  return u;
+}
+function landingKeyFromUrl(url) {
+  const norm = normalizeLandingUrl(url); // p.ej. "go.foodforjoe.es/comida-natural"
+  const slashIdx = norm.indexOf('/');
+  return slashIdx === -1 ? '' : norm.slice(slashIdx + 1); // "comida-natural"
+}
+function landingLabelFromKey(key) {
+  if (!key) return 'Landing (sin pain)';
+  return key.split('-').filter(Boolean).map((w, i) => i === 0 ? w.charAt(0).toUpperCase() + w.slice(1) : w).join(' ');
+}
+
 function onLandDatePresetChange() {
   const preset = document.getElementById('land-date-preset').value;
   document.getElementById('land-custom-range').style.display = preset === 'custom' ? 'flex' : 'none';
@@ -2014,6 +2043,8 @@ function renderLandingsTable() {
 
   const byGroup = {};
   LAND_GROUPS.forEach(g => { byGroup[g] = emptyAggJs(); });
+  const byLanding = {};
+  const landingLabels = {};
   (DATA.adsRaw || []).forEach(r => {
     const [date, campaign, adset, ad, spend, revenue, purchases, leads, outbound, impressions, reach, visits] = r;
     if (date < from || date > to) return;
@@ -2023,6 +2054,14 @@ function renderLandingsTable() {
     const b = byGroup[group];
     b.spend+=spend; b.revenue+=revenue; b.purchases+=purchases; b.leads+=leads;
     b.outbound+=outbound; b.impressions+=impressions; b.reach+=reach; b.visits+=visits;
+
+    if (group === 'Landings') {
+      const key = landingKeyFromUrl(dest);
+      if (!byLanding[key]) { byLanding[key] = emptyAggJs(); landingLabels[key] = landingLabelFromKey(key); }
+      const lb = byLanding[key];
+      lb.spend+=spend; lb.revenue+=revenue; lb.purchases+=purchases; lb.leads+=leads;
+      lb.outbound+=outbound; lb.impressions+=impressions; lb.reach+=reach; lb.visits+=visits;
+    }
   });
 
   const rowsObj = {};
@@ -2032,6 +2071,16 @@ function renderLandingsTable() {
 
   buildTable('data-table-land', rowsObj, LAND_GROUPS, 'Destino');
   document.getElementById('land-period-label').textContent = '(' + fmtDate(from) + ' — ' + fmtDate(to) + ')';
+
+  const landKeys = Object.keys(byLanding).sort((a, b) => byLanding[b].spend - byLanding[a].spend);
+  const landLabelsArr = landKeys.map(k => landingLabels[k]);
+  const landRowsObj = {};
+  const landTotal = emptyAggJs();
+  landKeys.forEach(k => { landRowsObj[landingLabels[k]] = deriveDay(byLanding[k]); sumAggJs(landTotal, byLanding[k]); });
+  landRowsObj['Total'] = deriveDay(landTotal);
+
+  buildTable('data-table-land-detail', landRowsObj, landLabelsArr, 'Landing');
+  document.getElementById('land-detail-period-label').textContent = document.getElementById('land-period-label').textContent;
 }
 
 document.getElementById('land-date-from').value = DATA.period_from;
